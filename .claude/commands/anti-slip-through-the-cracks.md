@@ -150,6 +150,10 @@ When creating a new Deal:
 - Set `Source Routine = "Anti-Slip Through the Cracks"` (or
   "Backfill" for first-run).
 - Set `Sales Home Source URL` to the Notion page URL.
+- **Update the source Opportunity Note's `📊 Deal` property** to
+  point at the new Deal (relation, DUAL). This is what makes the
+  Sales Home Opportunity Notes view actually reference the new HQ
+  system. Without this step, Opportunity Notes appears disconnected.
 - Treat as Active candidate for re-engagement evaluation.
 
 ### 1C. HubSpot dormant customers

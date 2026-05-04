@@ -204,6 +204,10 @@ participant company.
   `Last Activity Source = "Fireflies"`.
 - Append one-line activity entry to Notes.
 - Link Deal ↔ Contact (Contacts relation).
+- **If the Deal has a `Sales Home Source URL`** pointing to an
+  Opportunity Note, update that Opportunity Note's `📊 Deal`
+  property to relate back to the Deal. This keeps the bidirectional
+  Sales Home ↔ HQ link populated.
 - If transcript indicates clear stage advance (proposal accepted, SOW
   signed, etc.) → CRM Review Queue,
   `Type = "Other"`,
