@@ -39,6 +39,20 @@ Cron: `0 8-18 * * 1-5` (set in claude.ai/code/routines, America/New_York).
 
 ---
 
+## Capture guarantee (hard contract)
+
+Every action item Chris commits to on a call → one Action Pipeline
+task. Every email this routine drafts → one Action Pipeline "Review
+draft" task with the Gmail draft URL in `Source Link`. Drafts go to
+Gmail Drafts, **never auto-sent** (except verified intros). When Chris
+actually sends the email later, the next run of this routine detects
+it and auto-completes the task (see "Task Lifecycle" below). If you
+ever skip creating a task because the action item is "small" or
+"obvious", you have failed the contract — create the task with a low
+DEFCON instead.
+
+---
+
 ## Identity
 
 - Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
@@ -337,6 +351,55 @@ Gmail drafts. Skip past-due items.
 ### Internal meeting summary
 Write ≤300-word summary on the relevant Internal HQ page. Decisions,
 action items, status. No raw transcript.
+
+---
+
+## Task Lifecycle & Auto-Completion
+
+Action Pipeline tasks move through these states:
+
+1. **Created** with `Status = "Not Started"`, DEFCON, Category, For
+   Whom set by this routine.
+2. **In Progress** — Chris sets manually when starting work.
+3. **Done** — Chris sets manually OR this routine auto-completes
+   (rules below).
+4. **Cancelled** — if Status remained "Not Started" 60+ days past
+   Due Date with no activity, set Status = "Cancelled" with Note
+   "Auto-cancelled — stale, never started".
+
+### Auto-completion (run every cycle, before "At end")
+
+For every Action Pipeline row with `Source = "Email Draft"` AND
+`Status` NOT IN ["Done", "Cancelled"]:
+
+1. Parse the Gmail draft ID from `Source Link`
+   (`https://mail.google.com/mail/u/0/#drafts/<id>`).
+2. Search Gmail Sent for a message to the same recipient with the
+   matching subject/body in the last 14 days.
+3. **Sent message found** → set `Status = "Done"`, append to Notes
+   "Auto-completed: email sent <date>", write Activity
+   (`Type = "Email Sent"`, `Source = "Gmail"`,
+   `Source Link = <sent message URL>`).
+4. **Draft gone but no sent message** → leave alone (deleted, not
+   sent — Chris can manually mark Cancelled if needed).
+5. **Draft still exists** → leave alone (still pending review).
+
+For every Action Pipeline row linked to a CRM Review Queue item:
+- If linked Review Queue row has `Resolved = true` → set Action
+  Pipeline `Status = "Done"`.
+
+For "stage advance" tasks (e.g. "Send NDA", "Prepare deck"): cannot
+auto-detect reliably → Chris marks Done manually. The dashboard's
+"Open Tasks" view filters Status ≠ Done, so completed tasks
+auto-disappear from the active board.
+
+### Quick-complete UX (for Chris)
+- Open Action Pipeline → click row → set Status = "Done" (or drag in
+  Board view grouped by Status).
+- Tasks with Status = "Done" remain in the DB for history but are
+  filtered out of the dashboard's Open Tasks view automatically.
+- A "Recently Completed" view on the Action Pipeline (filter:
+  Status = Done, sort: last edited desc) shows what got finished.
 
 ---
 

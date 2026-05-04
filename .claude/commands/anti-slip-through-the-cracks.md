@@ -36,6 +36,18 @@ Cron: `30 11,16 * * 1-5` (set in claude.ai/code/routines, America/New_York).
 
 ---
 
+## Capture guarantee (hard contract)
+
+Every silent / at-risk deal you flag → one CRM Review Queue row AND
+one Action Pipeline task linked to it. Every re-engagement draft →
+one "Review draft" Action Pipeline task with Gmail draft URL in
+`Source Link`. Drafts go to Gmail Drafts, **never auto-sent**. When
+Chris sends the draft later, the next run auto-completes the task
+(see "Task Lifecycle" below). Mark-dead and Escalate verdicts also
+each get an Action Pipeline task — never a quiet recommendation.
+
+---
+
 ## Identity
 
 - Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
@@ -347,6 +359,49 @@ resolved Review Queue rows since last finished-at:
 3. Action Pipeline Chris task: `Status = "Done"`.
 4. Write Activity (`Type = "Stage Change"`,
    `Summary = "Reassigned to James Hong"`).
+
+---
+
+## Task Lifecycle & Auto-Completion
+
+Action Pipeline tasks created by this routine follow the same
+lifecycle as Parse Call's tasks:
+
+1. **Created** with `Status = "Not Started"` and DEFCON.
+2. **In Progress** — Chris manually.
+3. **Done** — Chris manually OR auto-completed (rules below).
+4. **Cancelled** — auto-cancelled if `Status = "Not Started"` 60+
+   days past Due Date.
+
+### Auto-completion (run every cycle, before Step 9)
+
+For every Action Pipeline row with
+`Source Routine = "Anti-Slip Through the Cracks"` AND
+`Source = "Email Draft"` AND `Status NOT IN ["Done", "Cancelled"]`:
+
+1. Parse the Gmail draft ID from `Source Link`.
+2. Search Gmail Sent for a message to the same recipient with
+   matching subject/body in the last 14 days.
+3. **Sent message found** → set `Status = "Done"`, append "Auto-
+   completed: email sent <date>" to Notes, write Activity
+   (`Type = "Email Sent"`, `Source = "Gmail"`).
+4. **Draft gone but no sent message** → leave alone.
+
+For every Action Pipeline row linked to a CRM Review Queue item:
+- If `Resolved = true` on the Review Queue row → set Action Pipeline
+  `Status = "Done"`.
+- If `Resolved = true` AND `Suggested Action = "Mark dead"` and Chris
+  approved → also update Deals DB (`Status Flag = "Dead"`,
+  `Stage = "Lost"`) and write Activity.
+
+For Mark-dead and Escalate tasks: when Chris sets Action Pipeline
+`Status = "Done"`, that's the trigger to update the Deal record on
+the next run (see Step 10).
+
+### Quick-complete UX (for Chris)
+- Open Action Pipeline → click row → set Status = "Done".
+- Filter out Done tasks via the dashboard's existing Status ≠ Done
+  filter. Done items remain in the DB for history.
 
 ---
 
