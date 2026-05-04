@@ -272,14 +272,50 @@ matching Action Pipeline task (if one exists) to Done + Archived,
 and write an Activity reflecting the existing send. Do NOT generate
 yet another re-engagement draft if Chris has already done one.
 
-Strict rules:
-- Reference specific from Drive/Fireflies (name/number/decision/deadline)
-- Banned phrases: "just checking in", "circling back", "following up",
-  "touching base", "wanted to reach out", "hope you're well",
-  "I hope this finds you"
-- 60–150 words
-- End with one concrete ask + date 5–7 business days out
-- No two messages share sentence structure
+### Drafting rules (STRICT — economy of words, polite, no AI tells)
+
+**Length:** 40–80 words. Hard cap. If the ask doesn't fit, the ask
+is too vague — go back and sharpen it.
+
+**Voice:** Polite, direct, plain. Write like Chris texting from his
+phone. Use contractions.
+
+**Reference something specific** from Drive notes / Fireflies: a
+name, number, decision, deadline. Generic = useless and gets ignored.
+
+**Banned characters:**
+- Em-dash (—) and en-dash (–). Use a period or comma. Em-dashes
+  are the single biggest AI tell. Never use them.
+- No bullets in emails. Plain prose.
+
+**Banned phrases:**
+- "just checking in", "circling back", "following up", "touching
+  base", "wanted to reach out", "hope you're well", "I hope this
+  finds you", "looking forward to", "reaching out to"
+- Transitions: "however", "moreover", "furthermore", "in addition",
+  "that said", "on that note", "with that in mind"
+- Apologetic openers unless genuinely warranted
+
+**Banned patterns:**
+- Multi-clause sentences glued with em-dashes
+- Three or more sentences in a row starting with "I"
+- "Wanted to / Just / Quick" openers
+
+**Required structure (in order):**
+1. Direct opener referencing the specific moment of last contact.
+2. The substance: what changed or what's still open.
+3. One concrete ask with a date 5–7 business days out.
+4. Sign-off: "Thanks," or "Best," + Chris.
+
+**Example (52 words):**
+> Hi Bharath, last we spoke in January about the Ping Phase 2
+> implementation. The scope and timeline have likely shifted since
+> then. Worth a 30-minute call next week to recalibrate? I'm open
+> Tuesday at 2 ET or Thursday at 11 ET.
+> Thanks, Chris
+
+**Across-run variety:** Do not reuse opener structure across two
+drafts in the same run.
 
 Draft to Gmail drafts. Do NOT send.
 

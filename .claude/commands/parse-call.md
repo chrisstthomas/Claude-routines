@@ -355,13 +355,53 @@ Then, if no recent sent message, proceed with drafting.
 
 Draft per-contact follow-up in Gmail drafts. Do NOT send.
 
-Strict drafting rules:
-- Reference something specific from the call (name/number/decision/deadline)
-- Banned phrases: "just checking in", "circling back", "following up",
-  "touching base", "wanted to reach out", "hope you're well",
-  "I hope this finds you"
-- 60–150 words
-- End with one concrete ask + a date
+### Drafting rules (STRICT — economy of words, polite, no AI tells)
+
+**Length:** 40–80 words. Hard cap. If the ask doesn't fit in 80
+words, the ask is too vague.
+
+**Voice:** Polite, direct, plain. Write like Chris texting from his
+phone. Use contractions (we'll, you're, can't, I'd).
+
+**Reference something specific** from the call: a name, number,
+decision, or deadline. Generic = useless.
+
+**Banned characters:**
+- Em-dash (—) and en-dash (–). Use a period or comma. The em-dash
+  is the single biggest AI tell. Never use it.
+- No bullet points in emails (they read robotic).
+
+**Banned phrases:**
+- "just checking in", "circling back", "following up", "touching
+  base", "wanted to reach out", "hope you're well", "I hope this
+  finds you", "looking forward to", "reaching out to"
+- Transitions: "however", "moreover", "furthermore", "in addition",
+  "that said", "on that note", "with that in mind"
+- Apologetic openers: "Sorry to bother", "Apologies for the delay"
+  (unless the delay is genuinely your fault and worth acknowledging
+  in one short sentence)
+
+**Banned patterns:**
+- Multi-clause sentences glued with em-dashes
+- Three or more sentences in a row starting with "I"
+- "Wanted to / Just / Quick" sentence openers
+
+**Required structure (in this order):**
+1. Direct opener referencing the specific call/topic. One sentence.
+2. The substance: what was decided, what's pending, what changed.
+   One to two sentences.
+3. One concrete ask with a date.
+4. Sign-off: "Thanks," or "Best," + Chris (first name only).
+
+**Example (47 words):**
+> Hi Devin, following our Apr 28 call I'm sharing the draft action
+> plan. PMs are on the recurring sync as of this week and Heather
+> owns agendas going forward. Could you review and flag concerns by
+> Wed May 6? Calendar link: <link>.
+> Thanks, Chris
+
+**Across-run variety:** Within one routine run, do not start two
+drafts with the same opening structure. Vary the opener.
 
 For EACH draft created:
 1. Create Action Pipeline task with:
