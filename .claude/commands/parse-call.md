@@ -331,6 +331,28 @@ Required fields:
 - `Source Routine = "Parse Call"`
 
 ### Follow-up email drafts (per external contact)
+
+**PRE-DRAFT DUPLICATE CHECK (CRITICAL — do not skip):**
+Before creating any new draft, search Gmail Sent:
+`from:me to:<contact email> after:<14 days ago>`
+
+If a recent sent message exists AND its subject/body covers the same
+topic/deal context → **DO NOT create a new draft.** Instead:
+1. Write Activity (`Type = "Email Sent"`, `Source = "Gmail"`,
+   `Source Link = <sent message URL>`,
+   `Summary = first 200 chars of sent body`).
+2. If there's an existing Action Pipeline "Review draft to <contact>"
+   row that's still open → set its `Status = "Done"` and
+   `Archived = true` with Notes "Auto-completed: matching sent message
+   detected during pre-draft sweep on <date>".
+3. Skip the draft creation step entirely.
+
+This prevents Parse Call from filling Chris's drafts folder with
+duplicates after he already sent something. Same applies for
+introduction emails — check Sent first.
+
+Then, if no recent sent message, proceed with drafting.
+
 Draft per-contact follow-up in Gmail drafts. Do NOT send.
 
 Strict drafting rules:

@@ -217,8 +217,30 @@ For each candidate, in this order:
 4. **Sales Home Opportunity Note** — running context.
 5. **HubSpot** — historical only.
 
-### 14-day reply guardrail (HARD)
-If Gmail shows reply from contact in last 14 days, drop entirely.
+### 14-day Gmail sweep (HARD — bidirectional)
+
+**Drop the candidate entirely if EITHER condition is true:**
+
+1. **Contact replied in last 14 days** — existing rule. Search:
+   `from:<contact email> to:me after:<14 days ago>`. Found → drop.
+   The deal isn't silent; contact just replied.
+
+2. **Chris already sent in last 14 days** (NEW — anti-junk rule):
+   `from:me to:<contact email> after:<14 days ago>`. Found → drop.
+   The deal isn't silent; Chris already re-engaged. Without this
+   check, Anti-Slip floods the cracks with re-engagement drafts for
+   deals Chris already followed up on.
+
+When dropping a candidate via either rule, write Activity
+(`Type = "Email Sent"` or `"Email Received"`, `Source = "Gmail"`,
+`Source Link = <thread URL>`, `Summary = "Deal not silent —
+recent <direction> activity"`). This keeps the timeline accurate
+and explains to Chris why the deal didn't surface.
+
+If an Action Pipeline task already exists for this contact (from a
+prior Anti-Slip run that drafted re-engagement) AND a sent message
+now exists from Chris → set the task `Status = "Done"`,
+`Archived = true`, append Notes "Auto-completed: Chris sent on <date>".
 
 ---
 
@@ -239,6 +261,16 @@ signing-authority issue.
 ---
 
 ## Step 4 — Draft re-engagement messages (Re-engage only)
+
+**Second pre-draft duplicate check** (in addition to Step 2's
+14-day sweep — applied per-candidate that survived to this step):
+
+Before drafting, re-search Gmail Sent for any send from Chris to the
+contact in the last 30 days that touches the same deal/topic. If
+found → skip the draft for this candidate; instead update the
+matching Action Pipeline task (if one exists) to Done + Archived,
+and write an Activity reflecting the existing send. Do NOT generate
+yet another re-engagement draft if Chris has already done one.
 
 Strict rules:
 - Reference specific from Drive/Fireflies (name/number/decision/deadline)
