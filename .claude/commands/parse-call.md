@@ -11,32 +11,37 @@ $ARGUMENTS
 ## What this routine is for
 
 This is one of two routines that together form Chris's **sales brain**.
-The brain has two surfaces:
+The brain has three surfaces:
 
-  1. **Pipeline Dashboard** — `📊 Deals` DB in Chris's Internal HQ
-  2. **Tasks Dashboard** — `📋 Owed to Chris` DB in Chris's Internal HQ
+  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage, only
+     active / at-risk; closed-lost deals never enter)
+  2. **Action Pipeline** — `📋 Chris's Action Pipeline` DB (DEFCON
+     1–5 funnel of what Chris must do, can review, or is owed)
+  3. **Activity Feed** — `📜 Activities` DB (every call, email, draft,
+     stage change is one row, related to its Deal — Apollo/HubSpot
+     style timeline)
 
-Parse Call's job is to turn every call Chris just had into:
-- a logged activity on the right Deal,
-- a follow-up email draft in his Gmail outbox,
-- an "Owed to Chris" task for every draft to review and every action
-  item Chris committed to,
-- updated contact / company / deal records in HubSpot,
+Parse Call's job: turn every call Chris just had into:
+- a logged Activity for the relevant Deal,
+- updated Contact records (and Contact → Deal links),
+- updated HubSpot meeting / contact / company records,
+- a follow-up email draft in Gmail,
+- DEFCON-prioritized Action Pipeline tasks for everything Chris must
+  do or review,
 - Notion meeting notes for internal calls.
 
 The companion routine ("Anti-Slip Through the Cracks") catches deals
 that have gone silent. Stay in your lane: Parse Call works calls that
 just happened. Anti-Slip works the silences.
 
-**Schedule:** hourly weekday 8a–6p ET. Cron: `0 8-18 * * 1-5` (set in
-claude.ai/code/routines, America/New_York timezone).
+**Schedule:** hourly weekday 8a–6p ET.
+Cron: `0 8-18 * * 1-5` (set in claude.ai/code/routines, America/New_York).
 
 ---
 
 ## Identity
 
-- Chris St. Thomas — christopher@anthropicidentity.com — CRO,
-  Anthropic Identity
+- Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
 - Internal domain: @anthropicidentity.com
 - Known partner (skip CRM creation, note in summary): Liam Glennie
   (liam.glennie@anthropicidentity.com, liamglennie@gmail.com)
@@ -48,17 +53,18 @@ claude.ai/code/routines, America/New_York timezone).
 
 ---
 
-## Notion IDs (hardcoded — do not search)
+## Notion IDs (hardcoded)
 
-- Chris's Internal HQ (parent page): `35281a33-7504-81a1-833e-ffed81c7328d`
-- Claude Routine Runs DB:    `collection://3ae8c44d-21e2-4e38-987c-1ffa5d38464c`
-- CRM Review Queue DB:       `collection://65999c82-db08-44e5-b35b-f5249bdce201`
-- 📊 Deals DB:               `collection://9b9841c0-61ba-468f-8059-842d6a5dd7ca`
-- 📋 Owed to Chris DB:       `collection://b4b49cf4-eb24-4df7-8910-80e171a7eb4b`
-- 👤 Reps DB:                `collection://ec1321d8-c687-41cc-a540-6ae1fe9dee6f`
-- Sales Home — Opportunity Notes:  `collection://2b581a33-7504-8089-9381-000b3f7628f6`
-- Sales Home — Proposals & SOWs:   `collection://fcdbace1-2c0d-4499-bb7d-c27d14e2ac64`
-- Sales Home — Prospects:          `collection://2e281a33-7504-80c2-b2c6-000b09ee3ea8`
+- Chris's Internal HQ (parent page):  `35281a33-7504-81a1-833e-ffed81c7328d`
+- Claude Routine Runs DB:             `collection://3ae8c44d-21e2-4e38-987c-1ffa5d38464c`
+- CRM Review Queue DB:                `collection://65999c82-db08-44e5-b35b-f5249bdce201`
+- 📊 Deals DB:                        `collection://9b9841c0-61ba-468f-8059-842d6a5dd7ca`
+- 📋 Chris's Action Pipeline DB:      `collection://b4b49cf4-eb24-4df7-8910-80e171a7eb4b`
+- 👤 Reps DB:                         `collection://ec1321d8-c687-41cc-a540-6ae1fe9dee6f`
+- 👥 Contacts DB:                     `collection://a6aa90f2-ba32-4e98-8a8a-ce5d6012b805`
+- 📜 Activities DB:                   `collection://8bb4f986-d8ed-46bb-bfa7-c2bc8f18d7e9`
+- Sales Home — Opportunity Notes:     `collection://2b581a33-7504-8089-9381-000b3f7628f6`
+- Sales Home — Proposals & SOWs:      `collection://fcdbace1-2c0d-4499-bb7d-c27d14e2ac64`
 
 ---
 
@@ -68,15 +74,13 @@ At start of run, query Claude Routine Runs for any row where
 `Routine = "Anti-Slip Through the Cracks"` AND `Status = "Partial"`
 AND `Started At` < 10 minutes ago. If found: write your own row with
 `Status = "No-op"`, `Summary = "Deferred to in-flight Anti-Slip run"`,
-exit cleanly.
+exit.
 
-Before drafting a follow-up email to a contact, query the Owed to
-Chris DB for any unresolved Anti-Slip-sourced "Review re-engagement
-draft" task to the same contact in the last 7 days. If found: in your
-own draft, prepend a note "Consolidate with existing Anti-Slip draft
-at <URL>" and DO create the new draft (Chris will reconcile in
-review). Add an Owed to Chris task with Notes flagging the
-duplication so Chris doesn't send both.
+Before drafting a follow-up email, query Action Pipeline for any
+unresolved Anti-Slip-sourced "Review re-engagement draft" task to the
+same contact in last 7 days. If found: prepend "Consolidate with
+existing Anti-Slip draft at <URL>" to your draft and flag the
+duplication in the new Action Pipeline task Notes.
 
 Tag every write with `Source Routine = "Parse Call"`.
 
@@ -87,288 +91,275 @@ Tag every write with `Source Routine = "Parse Call"`.
 **Required:** Fireflies, HubSpot, Notion, Google Calendar, Gmail.
 **Optional:** Apollo, Google Contacts, Slack.
 
-If an OPTIONAL connector errors, returns auth failure, or "tool not
-loaded": log the connector name in the run row's `Connectors Down`
-field, skip every step that depends solely on it, continue. Apollo
-down = skip enrichment, do not fail.
+Optional connector errors → log to Connectors Down, skip dependent
+steps, continue.
 
-If a REQUIRED connector errors: write `Status = Failed` on the run row,
-log the connector to `Connectors Down`, exit. Do not retry within the
-same run.
+Required connector error → `Status = Failed`, log to Connectors Down,
+exit. Do not retry.
 
 ---
 
-## Run lifecycle (every run, no exceptions)
+## Run lifecycle
 
 ### At start
-
-1. Run the mutual-awareness check above.
-2. Create a row in Claude Routine Runs:
-   - `Routine = "Parse Call"`
-   - `Status = "Partial"`
-   - `Started At = now`
-   - `Triggered By = "Schedule"` (or "Manual")
-3. Pull Fireflies transcripts: `fireflies_get_transcripts` with
-   `mine: true`, `limit: 50`, `fromDate = (last successful run
-   Finished At - 1 day)`. Use last 7 days if no prior cursor.
-4. Process oldest-first. Cross-check Items Created summaries on prior
-   run rows to skip already-processed transcripts.
+1. Mutual-awareness check above.
+2. Create Claude Routine Runs row:
+   - `Routine = "Parse Call"`, `Status = "Partial"`, `Started At = now`,
+     `Triggered By = "Schedule"` (or "Manual").
+3. `fireflies_get_transcripts` with `mine: true`, `limit: 50`,
+   `fromDate = (last successful run Finished At - 1 day)`. Default to
+   last 7 days if no prior cursor.
+4. Process oldest-first. Skip transcripts already processed (check
+   prior run Summaries).
 5. If zero new transcripts: `Status = "No-op"`,
-   `Summary = "No new transcripts since <date>"`, close row, exit.
+   `Summary = "No new transcripts since <date>"`, close, exit.
 
 ### At end
-
-Close the run row with:
 - `Status`: Success / Partial / No-op / Failed
 - `Finished At`: now
 - `Items Processed`: transcripts examined
-- `Items Created`: drafts + Notion pages + HubSpot records + Owed
-  tasks + Deal updates
-- `Items Skipped`: personal/partner-only/empty
-- `Connectors Down`: any that errored
-- `Summary`: ≤300 words. One bullet per transcript with title +
-  classification + what changed + which Deal it touched
-- `Errors / Blockers`: anything that broke
+- `Items Created`: drafts + Notion pages + HubSpot records + Action
+  Pipeline tasks + Activities + Deal updates
+- `Items Skipped`: personal/partner-only/empty/closed-lost
+- `Connectors Down`
+- `Summary` ≤300 words: one bullet per transcript with title +
+  classification + Deal touched + DEFCON-1 tasks created
+- `Errors / Blockers`
 
-A run that finds nothing still writes a No-op row. Silent runs
-forbidden.
+A run that finds nothing still writes a No-op row.
 
 ---
 
 ## Step 0 — Classify the call
-
-Pull participant emails from transcript metadata. Cross-reference
-Google Calendar if needed.
 - All participants `@anthropicidentity.com` → Internal path
-- No business context (personal, family, errand) → mark Skipped,
-  advance, continue
-- At least one external participant → External path
+- No business context (personal/family/errand) → Skipped, advance
+- ≥1 external participant → External path
 
 ---
 
 ## External path
 
 ### Identify participants
-
-- Internal (`@anthropicidentity.com`) → no CRM action
-- Known partner Liam Glennie → no CRM creation, note in summary
+- Internal `@anthropicidentity.com` → no CRM action
+- Liam Glennie → no CRM creation, note in summary
 - External → continue
 
 ### Resolve / create / update HubSpot contacts
-
 For each external participant:
-1. Search HubSpot by exact email.
-2. If no email match: search by `firstname` + `lastname` + `company`.
-3. Match found → UPDATE.
-4. No match but email + name + company all known → CREATE.
-5. Otherwise → CRM Review Queue row,
+1. Search HubSpot by exact email. Match → UPDATE.
+2. No email match: search by `firstname + lastname + company`.
+   Match → UPDATE.
+3. No match but email + name + company all known → CREATE.
+4. Otherwise → CRM Review Queue row,
    `Type = "Low-confidence contact match"`,
-   `Source Routine = "Parse Call"`. Do NOT create a phantom contact.
+   `Source Routine = "Parse Call"`. No phantom contacts.
 
-Fields:
-- firstname, lastname, email
-- phone — transcript first; if missing AND Apollo up, search Apollo by
-  email; if Apollo down, leave blank
-- jobtitle — same pattern
-- company — match to HubSpot company (below)
-- hs_lead_status — NEW, OPEN, IN_PROGRESS, OPEN_DEAL, UNQUALIFIED,
-  ATTEMPTED_TO_CONTACT, CONNECTED, BAD_TIMING
-- lifecyclestage — based on transcript context
+Fields: firstname, lastname, email, phone (Apollo enrichment if up),
+jobtitle, company, hs_lead_status, lifecyclestage.
+
+### Resolve / create / update Notion Contacts (NEW)
+For each external participant after HubSpot resolution:
+1. Search Contacts DB by exact email match.
+2. Match → UPDATE Last Touch = meeting date,
+   Last Touch Source = "Parse Call".
+3. No match → CREATE row:
+   - Name, Email, Title (from transcript), Company, Phone, LinkedIn
+     (if mentioned), Owner = Chris (or matching Rep),
+     Last Touch = meeting date, Last Touch Source = "Parse Call",
+     HubSpot Contact ID, Source Routine = "Parse Call".
 
 ### Resolve / create / update HubSpot companies
+Match by email domain or exact company name. No match → CREATE.
+Apollo enrichment if up; otherwise transcript-only.
 
-Match by email domain or exact company name. If no match → CREATE.
+### Update / create the 📊 Deals record (KEY STEP)
 
-If Apollo is up: search Apollo by email domain, pull industry,
-employee count, annual revenue, HQ city, description. Apollo down →
-fill only what transcript explicitly provided.
+**Filter rules — strictly enforce:**
+- If HubSpot deal `dealstage = closedlost` → SKIP entirely. Closed
+  lost deals NEVER enter the Notion Deals DB.
+- If creating a new Deal: there must be recent activity (this
+  transcript counts). Stale deals with no activity in 90+ days don't
+  get auto-created — they go to CRM Review Queue for Chris's review.
 
-Fields:
-- name
-- Company Owner: Chris St. Thomas (unless another rep was introduced
-  as primary on the call)
-- Company Type: Customer / Delivery Partner / Technology Partner
-- Type: Prospect / Partner / Reseller / Vendor / Other
-- Industry, City, Lifecycle Stage, Lead Status
-- Last Contacted: meeting date
+For each external contact, query Deals DB for an Active or At-Risk
+deal where Primary Contact Email = participant email OR Company =
+participant company.
 
-### Update the 📊 Deals DB (key step)
-
-For each external contact, query the Deals DB for an Active or
-At-Risk deal where `Primary Contact Email` = participant email OR
-`Company` = participant company name.
-
-If exactly one match:
-- Update `Last Activity` = meeting date
-- Update `Last Activity Source` = "Fireflies"
-- Append a one-line activity entry to `Notes`:
-  `"<date>: Call w/ <participants>. <2-sentence summary>. Source: <Fireflies URL>"`
-- If transcript clearly indicates a stage advance (proposal accepted,
-  SOW signed, etc.) → write a CRM Review Queue row,
+**One match:**
+- Set `Last Activity = meeting date`,
+  `Last Activity Source = "Fireflies"`.
+- Append one-line activity entry to Notes.
+- Link Deal ↔ Contact (Contacts relation).
+- If transcript indicates clear stage advance (proposal accepted, SOW
+  signed, etc.) → CRM Review Queue,
   `Type = "Other"`,
   `Suggested Action = "Advance <Deal> from <stage> to <new stage>: <evidence>"`.
-  Do NOT auto-advance the stage.
+  Do NOT auto-advance.
 
-If no Deal match but a strong opportunity exists →
-CRM Review Queue, `Type = "Stale deal"` or `"Other"`,
-`Suggested Action = "Consider creating Deal: <reason, timeline, amount>"`.
+**No match but strong opportunity AND not closed-lost:**
+- CRM Review Queue, `Type = "Stale deal"` or `"Other"`,
+  `Suggested Action = "Consider creating Deal: <reason, timeline, amount>"`.
 
-If multiple Deal matches → CRM Review Queue,
-`Type = "Duplicate suspected"`.
+**Multiple matches:** CRM Review Queue, `Type = "Duplicate suspected"`.
+
+### Write a 📜 Activity row (NEW — required)
+For every external call processed, create one Activity:
+- `Activity` = "Call w/ <participants>: <2-sentence summary>"
+- `Type = "Call"`
+- `Timestamp` = meeting date+time
+- `Deal` = matched Deal (relation)
+- `Contact` = matched/created Contact(s) (relation, multi)
+- `Actor` = Chris (relation to Reps)
+- `Source = "Fireflies"`
+- `Source Link` = Fireflies URL
+- `Summary` = ≤200-word recap (decisions, blockers, action items)
+- `Source Routine = "Parse Call"`
 
 ### Enrich the HubSpot meeting record
-
-Calendar↔HubSpot sync already created a meeting record. Find by date
-+ attendees. Fill the Log Meeting field, max 400 words:
-- Context (call type, participants, roles)
-- Key discussion points
-- Pain points / blockers
-- Decisions made
-- Follow-up items (with owner + due date if known)
-- Next steps + timing
-
-Set Meeting Outcome (Scheduled / Completed / No Show / Rescheduled)
-where appropriate. Never dump the raw transcript.
+Find by date + attendees. Fill Log Meeting field, max 400 words
+(context, discussion, blockers, decisions, follow-ups, next steps).
+Set Meeting Outcome appropriately.
 
 ### Create HubSpot tasks
-
-For each clear action item with a non-Chris owner:
-- Default association: contact
-- If contact is on a Deal → associate with the Deal
+For action items with non-Chris owner:
+- Default association: contact (or Deal if exists)
 - Due date based on transcript urgency
+Ambiguous → CRM Review Queue, `Type = "Ambiguous action item"`.
 
-Ambiguous action item (no clear owner or ask) → CRM Review Queue,
-`Type = "Ambiguous action item"`. No phantom tasks.
+### Create 📋 Action Pipeline tasks (KEY STEP)
 
-### Create Owed-to-Chris tasks (key step)
+For each action item Chris committed to OR every email draft created:
 
-For each action item that Chris committed to OR that lives in Chris's
-queue:
-- `Task`: "<verb-led action> — <person/company>"
-- `Owed by`: Chris St. Thomas (relation to Reps DB)
-- `Related Deal`: linked if matched above
-- `Due Date`: transcript urgency or default +5 business days
-- `Source`: "Call"
-- `Source Link`: Fireflies transcript URL
-- `Captured On`: meeting date
-- `Source Routine`: "Parse Call"
+| Source | Category | For Whom | DEFCON guidance |
+|--------|----------|----------|-----------------|
+| Action item Chris promised on call, due today/tomorrow | Deal Work | Chris does it | **1 - Critical (Today)** |
+| Action item due this week | Deal Work | Chris does it | **2 - High (This Week)** |
+| Action item due this month | Deal Work | Chris does it | **3 - Medium (This Month)** |
+| Email draft awaiting Chris review | Deal Work | Chris reviews | **2 - High (This Week)** |
+| Stage 4 / negotiation deal task | Deal Work | Chris does it | **1 or 2** |
+| Action item Chris owes a partner / customer | Deal Work | Chris owes others | based on due date |
+| Action item assigned to a rep, due-back to Chris | Rep Management | Rep owes Chris | based on due date |
+| Internal admin (paperwork, system setup) | Admin | Chris does it | **3** default |
+| Strategy / planning | Strategic | Chris does it | **3 or 4** |
+
+Required fields:
+- `Task` (verb-led)
+- `Owed by` relation (Chris or rep)
+- `Related Deal` relation if matched
+- `Due Date`
+- `Status = "Not Started"`
+- `Priority` (High/Med/Low — coarser than DEFCON)
+- `DEFCON` (per table above)
+- `Category`
+- `For Whom`
+- `Source = "Call"` (or "Email Draft" for drafts)
+- `Source Link` = Fireflies URL or Gmail draft URL
+- `Captured On` = meeting date
+- `Source Routine = "Parse Call"`
 
 ### Follow-up email drafts (per external contact)
+Draft per-contact follow-up in Gmail drafts. Do NOT send.
 
-Draft a per-contact follow-up in Chris's Gmail drafts. Do NOT send.
-
-Rules:
-- Reference something specific from the call (a name, number,
-  decision, deadline)
+Strict drafting rules:
+- Reference something specific from the call (name/number/decision/deadline)
 - Banned phrases: "just checking in", "circling back", "following up",
-  "touching base", "wanted to reach out", "hope you're well", "I hope
-  this finds you"
+  "touching base", "wanted to reach out", "hope you're well",
+  "I hope this finds you"
 - 60–150 words
 - End with one concrete ask + a date
 
-For EACH draft created, also create an Owed-to-Chris task:
-- `Task`: "Review draft to <contact name> (<company>)"
-- `Owed by`: Chris
-- `Related Deal`: linked if matched
-- `Due Date`: tomorrow
-- `Source`: "Email Draft"
-- `Source Link`: Gmail draft URL (construct from draft ID:
-  `https://mail.google.com/mail/u/0/#drafts/<id>`)
-- `Notes`: first ~100 chars of draft body
-- `Source Routine`: "Parse Call"
+For EACH draft created:
+1. Create Action Pipeline task (`Source = "Email Draft"`,
+   `For Whom = "Chris reviews"`, `DEFCON = "2 - High (This Week)"`,
+   `Due Date = tomorrow`, `Source Link = Gmail draft URL`).
+2. Write Activity row (`Type = "Draft Created"`,
+   `Source = "Gmail"`, `Source Link = Gmail draft URL`,
+   `Summary = first 200 chars of draft body`).
 
-### Introduction emails (auto-send exception)
+### Introduction emails (only auto-send exception)
+When Chris commits on call to introduce two people:
+1. Look up both in Google Contacts.
+2. Both found → draft AND auto-send (Chris as sender, both as
+   recipients). HubSpot activity log on both contacts. Action
+   Pipeline task with `Status = "Done"`. Activity row
+   (`Type = "Email Sent"`).
+3. Only one found → draft, leave in drafts, note "Missing email for <name>".
+   Action Pipeline task as normal.
+4. Neither found → CRM Review Queue, `Type = "Missing intro email"`.
 
-When Chris explicitly commits on the call to introduce two people:
-1. Look up both in Google Contacts by name.
-2. Both emails found → draft AND auto-send (Chris as sender, both as
-   recipients). Log activity on both HubSpot contacts. Create an
-   Owed-to-Chris task with `Status = "Done"` so it shows in his
-   "what got done" view.
-3. Only one found → draft, leave in Gmail drafts, add note "Missing
-   email for <name>". Owed-to-Chris task as above (status Not Started).
-4. Neither found → CRM Review Queue,
-   `Type = "Missing intro email"`.
-
-If Google Contacts is down → all intros to drafts. Do not auto-send
-without verified addresses.
+If Google Contacts down → all intros to drafts, no auto-send.
 
 ### Deals — what to do and not do
-
-- Do NOT auto-create deals. Strong opportunity → CRM Review Queue.
-- DO update existing HubSpot deals if a contact on the call is on one:
-  - dealname, dealstage (Initial Outreach / Qualification / Discovery
-    / Solution / Proposal / Legal Review / Closed Won / Closed Lost),
-    closedate, amount, Deal Owner, Forecast Category, Proposal
-    Accepted, Advance to Next Stage
-- ALSO update the Notion 📊 Deals DB row in parallel (see "Update the
-  Deals DB" step above).
+- Do NOT auto-create deals; route to CRM Review Queue.
+- DO update existing HubSpot deals (dealname, dealstage, closedate,
+  amount, Deal Owner, Forecast Category, Proposal Accepted, Advance
+  to Next Stage).
+- ALSO update Notion Deals DB row (Last Activity, Last Activity
+  Source, Notes append).
+- Stage change → write Activity (`Type = "Stage Change"`,
+  `Summary = "<old stage> → <new stage>"`).
 
 ---
 
 ## Internal path
 
 ### Extract action items
-
-What did Chris ask his team to do? Be specific. What did his team
-commit to him?
+What did Chris ask his team? What did the team commit to him?
 
 ### Notion update
+- Search under Chris's Internal HQ for matching initiative page.
+- Match → update with new action items / status / dates.
+- No match AND recurring/multi-step → create new page under Internal HQ.
+- Minor / one-off → log in run summary; no page.
 
-- Search under Chris's Internal HQ for an existing page matching the
-  initiative.
-- Match found → update with new action items, status, dates.
-- No match AND initiative is recurring or multi-step → create a new
-  page under Chris's Internal HQ.
-- Minor / one-off → log in run summary; do NOT create a page.
-
-### Owed-to-Chris tasks
-
+### Action Pipeline tasks
 For each action item:
-- If owner is a rep (not Chris) → create Owed-to-Chris row with
-  `Owed by = <rep>` (relation to Reps DB). This is the
-  "what reps owe Chris" view.
-- If owner is Chris → create Owed-to-Chris row with `Owed by = Chris`.
-  This is Chris's personal todo.
-- `Source`: "1:1" / "GTM Weekly" / "Forecast Call" / etc. based on
-  meeting title.
-- `Source Link`: Fireflies URL.
-- `Source Routine`: "Parse Call".
+- Owner is rep (not Chris) → row with `Owed by = <rep>`,
+  `For Whom = "Rep owes Chris"`, `Category = "Rep Management"`.
+- Owner is Chris → row with `Owed by = Chris`, `For Whom =
+  "Chris does it"`, `Category` = best fit (Deal Work / Strategic /
+  Admin / Internal Comms).
+- DEFCON via the table above.
+- `Source` per meeting type (1:1 / GTM Weekly / Forecast Call).
+- `Source Link` = Fireflies URL.
+- `Source Routine = "Parse Call"`.
+
+### Activity row for the meeting
+Create one Activity (`Type = "Meeting"`, `Source = "Fireflies"`,
+`Actor` = relevant rep(s), `Summary` ≤200 words). No `Deal` if
+purely internal.
 
 ### Reminder email drafts
-
-For each Owed-to-Chris row with future due date AND `Owed by ≠ Chris`,
-draft a reminder email to the assigned rep dated the day before due.
-Place in Gmail drafts. The Owed-to-Chris row's `Reminder Sent` stays
-unchecked until the email is actually sent (Chris's action). Skip
-past-due items.
+For each Action Pipeline row with future Due Date AND `Owed by ≠ Chris`,
+draft a reminder email to the rep dated day-before-due. Place in
+Gmail drafts. Skip past-due items.
 
 ### Internal meeting summary
-
-Write ≤300-word summary on the relevant Notion page. Decisions, action
-items assigned, status updates. No raw discussion.
+Write ≤300-word summary on the relevant Internal HQ page. Decisions,
+action items, status. No raw transcript.
 
 ---
 
 ## Guardrails (never violate)
 
+- **Never** add closed-lost deals to Notion Deals DB.
+- **Never** create a Deal without recent activity (this run's call
+  counts; otherwise route to CRM Review Queue).
 - Never dump raw transcript into HubSpot or Notion.
 - Exact email match beats name match.
-- Don't overwrite stronger HubSpot data with weaker Apollo enrichment.
-- Don't create deals.
+- Don't overwrite stronger HubSpot data with weaker Apollo.
+- Don't auto-create deals.
 - Don't create tasks without a clear action item.
 - Don't auto-send any email except verified intros.
-- Never ask Chris a question during a scheduled run. Use the CRM
-  Review Queue.
-- HubSpot meeting summaries ≤400 words. Notion internal summaries
-  ≤300 words.
+- Never ask Chris a question during a scheduled run.
+- HubSpot meeting summaries ≤400 words. Notion summaries ≤300.
+  Activity Summaries ≤200.
 - Always tag writes with `Source Routine = "Parse Call"`.
 
 ---
 
 ## Out of scope
-
-Texts, meeting bookings, Apollo sequence enrollment, auto-replies, any
+Texts, meeting bookings, Apollo sequences, auto-replies, any
 auto-send beyond verified intros.
 
 Begin now.
