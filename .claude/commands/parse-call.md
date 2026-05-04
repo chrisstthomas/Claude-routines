@@ -291,19 +291,29 @@ Ambiguous → CRM Review Queue, `Type = "Ambiguous action item"`.
 
 ### Create 📋 Action Pipeline tasks (KEY STEP)
 
-For each action item Chris committed to OR every email draft created:
+**DEFCON criteria — STRICT (revenue-impact lens):**
 
-| Source | Category | For Whom | DEFCON guidance |
-|--------|----------|----------|-----------------|
-| Action item Chris promised on call, due today/tomorrow | Deal Work | Chris does it | **1 - Critical (Today)** |
-| Action item due this week | Deal Work | Chris does it | **2 - High (This Week)** |
-| Action item due this month | Deal Work | Chris does it | **3 - Medium (This Month)** |
-| Email draft awaiting Chris review | Deal Work | Chris reviews | **2 - High (This Week)** |
-| Stage 4 / negotiation deal task | Deal Work | Chris does it | **1 or 2** |
-| Action item Chris owes a partner / customer | Deal Work | Chris owes others | based on due date |
-| Action item assigned to a rep, due-back to Chris | Rep Management | Rep owes Chris | based on due date |
-| Internal admin (paperwork, system setup) | Admin | Chris does it | **3** default |
-| Strategy / planning | Strategic | Chris does it | **3 or 4** |
+| DEFCON | Trigger (must match ≥1, otherwise drop a level) |
+|---|---|
+| **1 — Critical (Today)** | At-risk customer trust on the line; Stage 4 deal blocked by Chris's overdue commitment ≥$250K; time-bombed (signature/board today); customer reply-deadline today; missing this week directly loses identifiable revenue. |
+| **2 — High (This Week)** | Active proposal/SOW awaiting Chris ≥$100K; champion expecting concrete deliverable this week; pipeline deal Stalled if not advanced; Stage 4 negotiation needing Chris's input; scheduled exec-sponsor call/event this week. |
+| **3 — Medium (This Month)** | Top-of-funnel intros, partner sourcing, qualification; discovery-stage deals; strategic partner exploration without direct $ this Q; QBRs; sales enablement materially affecting current-quarter execution. |
+| **4 — Planned** | Strategic initiatives 30-90d out; sales training; hiring follow-throughs; Q+1 planning; internal admin paperwork without revenue impact; "should happen but nothing falls if it slips a week". |
+| **5 — Someday** | Personal admin; aspirational/optional; backlog clutter; stale items pending review. |
+
+**Default-down rule:** if ambiguous between two levels, **always pick the lower-priority one**. Better to under-flag than over-flag — Chris promotes manually if needed.
+
+**Category mapping:**
+
+| Source | Category | For Whom |
+|--------|----------|----------|
+| Action item Chris promised, deal-related | Deal Work | Chris does it |
+| Email draft awaiting Chris review | Deal Work | Chris reviews |
+| Action item Chris owes a partner / customer | Deal Work | Chris owes others |
+| Action item assigned to a rep, due-back to Chris | Rep Management | Rep owes Chris |
+| Internal admin (paperwork, system setup) | Admin | Chris does it |
+| Strategy / planning | Strategic | Chris does it |
+| Rep coaching / sales enablement | Rep Management | Chris does it |
 
 Required fields:
 - `Task` (verb-led)
@@ -312,7 +322,7 @@ Required fields:
 - `Due Date`
 - `Status = "Not Started"`
 - `Priority` (High/Med/Low — coarser than DEFCON)
-- `DEFCON` (per table above)
+- `DEFCON` (per criteria above — apply default-down rule)
 - `Category`
 - `For Whom`
 - `Source = "Call"` (or "Email Draft" for drafts)
@@ -321,21 +331,115 @@ Required fields:
 - `Source Routine = "Parse Call"`
 
 ### Follow-up email drafts (per external contact)
+
+**PRE-DRAFT DUPLICATE CHECK (CRITICAL — do not skip):**
+Before creating any new draft, search Gmail Sent:
+`from:me to:<contact email> after:<14 days ago>`
+
+If a recent sent message exists AND its subject/body covers the same
+topic/deal context → **DO NOT create a new draft.** Instead:
+1. Write Activity (`Type = "Email Sent"`, `Source = "Gmail"`,
+   `Source Link = <sent message URL>`,
+   `Summary = first 200 chars of sent body`).
+2. If there's an existing Action Pipeline "Review draft to <contact>"
+   row that's still open → set its `Status = "Done"` and
+   `Archived = true` with Notes "Auto-completed: matching sent message
+   detected during pre-draft sweep on <date>".
+3. **If a stale Gmail draft also exists** (older draft to same recipient
+   covering the same topic) → routine cannot delete drafts via API.
+   Write a CRM Review Queue row, `Type = "Other"`,
+   `Suggested Action = "Delete stale Gmail draft <draft_id> — superseded
+   by sent message <date>"` so Chris can clean it up manually.
+4. Skip the draft creation step entirely.
+
+**Source Link format (always — both routines):**
+The Source Link property on every Email-Draft Action Pipeline task
+MUST be the Gmail draft URL in this exact format:
+`https://mail.google.com/mail/u/0/#drafts/<draft_id>`
+where `<draft_id>` is returned by Gmail's create_draft API. Never
+substitute the HubSpot task URL or Fireflies URL — that defeats the
+one-click-to-send workflow.
+
+This prevents Parse Call from filling Chris's drafts folder with
+duplicates after he already sent something. Same applies for
+introduction emails — check Sent first.
+
+Then, if no recent sent message, proceed with drafting.
+
 Draft per-contact follow-up in Gmail drafts. Do NOT send.
 
-Strict drafting rules:
-- Reference something specific from the call (name/number/decision/deadline)
-- Banned phrases: "just checking in", "circling back", "following up",
-  "touching base", "wanted to reach out", "hope you're well",
-  "I hope this finds you"
-- 60–150 words
-- End with one concrete ask + a date
+### Drafting rules (STRICT — economy of words, polite, no AI tells)
+
+**Length:** 40–80 words. Hard cap. If the ask doesn't fit in 80
+words, the ask is too vague.
+
+**Voice:** Polite, direct, plain. Write like Chris texting from his
+phone. Use contractions (we'll, you're, can't, I'd).
+
+**Reference something specific** from the call: a name, number,
+decision, or deadline. Generic = useless.
+
+**Banned characters:**
+- Em-dash (—) and en-dash (–). Use a period or comma. The em-dash
+  is the single biggest AI tell. Never use it.
+- No bullet points in emails (they read robotic).
+
+**Banned phrases:**
+- "just checking in", "circling back", "following up", "touching
+  base", "wanted to reach out", "hope you're well", "I hope this
+  finds you", "looking forward to", "reaching out to"
+- Transitions: "however", "moreover", "furthermore", "in addition",
+  "that said", "on that note", "with that in mind"
+- Apologetic openers: "Sorry to bother", "Apologies for the delay"
+  (unless the delay is genuinely your fault and worth acknowledging
+  in one short sentence)
+
+**Banned patterns:**
+- Multi-clause sentences glued with em-dashes
+- Three or more sentences in a row starting with "I"
+- "Wanted to / Just / Quick" sentence openers
+
+**Required structure (in this order):**
+1. Direct opener referencing the specific call/topic. One sentence.
+2. The substance: what was decided, what's pending, what changed.
+   One to two sentences.
+3. One concrete ask with a date.
+4. Sign-off: "Thanks," or "Best," + Chris (first name only).
+
+**Example (47 words):**
+> Hi Devin, following our Apr 28 call I'm sharing the draft action
+> plan. PMs are on the recurring sync as of this week and Heather
+> owns agendas going forward. Could you review and flag concerns by
+> Wed May 6? Calendar link: <link>.
+> Thanks, Chris
+
+**Across-run variety:** Within one routine run, do not start two
+drafts with the same opening structure. Vary the opener.
 
 For EACH draft created:
-1. Create Action Pipeline task (`Source = "Email Draft"`,
-   `For Whom = "Chris reviews"`, `DEFCON = "2 - High (This Week)"`,
-   `Due Date = tomorrow`, `Source Link = Gmail draft URL`).
-2. Write Activity row (`Type = "Draft Created"`,
+1. Create Action Pipeline task with:
+   - `Task` = "Review draft to <contact name> (<company>)"
+   - `Source = "Email Draft"`
+   - `For Whom = "Chris reviews"`
+   - `DEFCON` per the strict criteria above (NOT always 2 — apply
+     default-down rule based on the underlying deal's revenue
+     impact and timing)
+   - `Due Date = tomorrow`
+   - `Source Link = Gmail draft URL`
+2. **Embed the full draft body** in the task's page content (not
+   just the link), formatted as:
+   ```
+   ## Draft to <recipient name> <recipient email>
+   **Subject:** <subject>
+
+   <full draft body — preserve paragraph breaks>
+
+   ---
+   *Click the Source Link property above to open in Gmail and send.*
+   ```
+   This way Chris reads the draft inline in Notion without leaving
+   the task; clicks Source Link only to send.
+3. Write Activity row (`Type = "Draft Created"`,
    `Source = "Gmail"`, `Source Link = Gmail draft URL`,
    `Summary = first 200 chars of draft body`).
 

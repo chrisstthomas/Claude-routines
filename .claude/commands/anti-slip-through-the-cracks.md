@@ -217,8 +217,43 @@ For each candidate, in this order:
 4. **Sales Home Opportunity Note** — running context.
 5. **HubSpot** — historical only.
 
-### 14-day reply guardrail (HARD)
-If Gmail shows reply from contact in last 14 days, drop entirely.
+### 14-day Gmail sweep (HARD — bidirectional)
+
+**Drop the candidate entirely if EITHER condition is true:**
+
+1. **Contact replied in last 14 days** — existing rule. Search:
+   `from:<contact email> to:me after:<14 days ago>`. Found → drop.
+   The deal isn't silent; contact just replied.
+
+2. **Chris already sent in last 14 days** (NEW — anti-junk rule):
+   `from:me to:<contact email> after:<14 days ago>`. Found → drop.
+   The deal isn't silent; Chris already re-engaged. Without this
+   check, Anti-Slip floods the cracks with re-engagement drafts for
+   deals Chris already followed up on.
+
+When dropping a candidate via either rule, write Activity
+(`Type = "Email Sent"` or `"Email Received"`, `Source = "Gmail"`,
+`Source Link = <thread URL>`, `Summary = "Deal not silent —
+recent <direction> activity"`). This keeps the timeline accurate
+and explains to Chris why the deal didn't surface.
+
+If an Action Pipeline task already exists for this contact (from a
+prior Anti-Slip run that drafted re-engagement) AND a sent message
+now exists from Chris → set the task `Status = "Done"`,
+`Archived = true`, append Notes "Auto-completed: Chris sent on <date>".
+
+**Stale draft cleanup:** If a Gmail draft also exists to the same
+recipient and is now stale (sent message supersedes it) → routine
+cannot delete drafts via API. Write a CRM Review Queue row,
+`Type = "Other"`, `Suggested Action = "Delete stale Gmail draft
+<draft_id> — superseded by sent message <date>"` so Chris cleans
+up manually.
+
+**Source Link format (always):**
+Source Link on every Email-Draft Action Pipeline task MUST be the
+Gmail draft URL: `https://mail.google.com/mail/u/0/#drafts/<draft_id>`
+where `<draft_id>` is the Gmail draft ID. Never substitute another
+URL — Chris needs one-click-to-send.
 
 ---
 
@@ -240,14 +275,60 @@ signing-authority issue.
 
 ## Step 4 — Draft re-engagement messages (Re-engage only)
 
-Strict rules:
-- Reference specific from Drive/Fireflies (name/number/decision/deadline)
-- Banned phrases: "just checking in", "circling back", "following up",
-  "touching base", "wanted to reach out", "hope you're well",
-  "I hope this finds you"
-- 60–150 words
-- End with one concrete ask + date 5–7 business days out
-- No two messages share sentence structure
+**Second pre-draft duplicate check** (in addition to Step 2's
+14-day sweep — applied per-candidate that survived to this step):
+
+Before drafting, re-search Gmail Sent for any send from Chris to the
+contact in the last 30 days that touches the same deal/topic. If
+found → skip the draft for this candidate; instead update the
+matching Action Pipeline task (if one exists) to Done + Archived,
+and write an Activity reflecting the existing send. Do NOT generate
+yet another re-engagement draft if Chris has already done one.
+
+### Drafting rules (STRICT — economy of words, polite, no AI tells)
+
+**Length:** 40–80 words. Hard cap. If the ask doesn't fit, the ask
+is too vague — go back and sharpen it.
+
+**Voice:** Polite, direct, plain. Write like Chris texting from his
+phone. Use contractions.
+
+**Reference something specific** from Drive notes / Fireflies: a
+name, number, decision, deadline. Generic = useless and gets ignored.
+
+**Banned characters:**
+- Em-dash (—) and en-dash (–). Use a period or comma. Em-dashes
+  are the single biggest AI tell. Never use them.
+- No bullets in emails. Plain prose.
+
+**Banned phrases:**
+- "just checking in", "circling back", "following up", "touching
+  base", "wanted to reach out", "hope you're well", "I hope this
+  finds you", "looking forward to", "reaching out to"
+- Transitions: "however", "moreover", "furthermore", "in addition",
+  "that said", "on that note", "with that in mind"
+- Apologetic openers unless genuinely warranted
+
+**Banned patterns:**
+- Multi-clause sentences glued with em-dashes
+- Three or more sentences in a row starting with "I"
+- "Wanted to / Just / Quick" openers
+
+**Required structure (in order):**
+1. Direct opener referencing the specific moment of last contact.
+2. The substance: what changed or what's still open.
+3. One concrete ask with a date 5–7 business days out.
+4. Sign-off: "Thanks," or "Best," + Chris.
+
+**Example (52 words):**
+> Hi Bharath, last we spoke in January about the Ping Phase 2
+> implementation. The scope and timeline have likely shifted since
+> then. Worth a 30-minute call next week to recalibrate? I'm open
+> Tuesday at 2 ET or Thursday at 11 ET.
+> Thanks, Chris
+
+**Across-run variety:** Do not reuse opener structure across two
+drafts in the same run.
 
 Draft to Gmail drafts. Do NOT send.
 
@@ -270,16 +351,25 @@ The Review Queue is the durable home — no page-per-run.
 
 ## Step 6 — Create 📋 Action Pipeline tasks (DEFCON-prioritized)
 
-DEFCON rules for Anti-Slip-sourced tasks:
+**DEFCON criteria — STRICT (revenue-impact lens):**
 
-| Deal value | Days dark | DEFCON |
-|------------|-----------|--------|
-| ≥$500K stalled | any | **1 - Critical (Today)** |
-| $100K–$500K stalled | any | **2 - High (This Week)** |
-| $50K–$100K stalled | any | **3 - Medium (This Month)** |
-| <$50K stalled | any | **4 - Planned** |
-| At-Risk customer (regardless of value) | any | **2** minimum |
-| Stage 4 deal at risk | any | **1** |
+| DEFCON | Trigger (must match ≥1) |
+|---|---|
+| **1 — Critical (Today)** | At-risk customer trust on the line; Stage 4 deal blocked by Chris's overdue commitment ≥$250K; time-bombed today; missing this week directly loses identifiable revenue. |
+| **2 — High (This Week)** | Active proposal/SOW awaiting Chris ≥$100K; Stage 4 negotiation needing Chris's input; pipeline deal Stalled if not advanced this week. |
+| **3 — Medium (This Month)** | Stalled deal $50K–$100K; partner-sourced exploration; QBRs; sales enablement affecting this quarter. |
+| **4 — Planned** | Stalled deal <$50K; long-tail re-engagement; admin without revenue impact. |
+| **5 — Someday** | Stale items, backlog. |
+
+**Anti-Slip stalled-deal value brackets:**
+- ≥$500K stalled → DEFCON 1
+- $100K–$500K stalled → DEFCON 2
+- $50K–$100K stalled → DEFCON 3
+- <$50K stalled → DEFCON 4
+- Active customer at-risk (any value) → DEFCON 2 minimum
+- Stage 4 deal at-risk → DEFCON 1
+
+**Default-down rule:** ambiguous → pick lower DEFCON. Better to under-flag than over-flag.
 
 For each Re-engage draft:
 - `Task`: "Review re-engagement draft to <contact> (<company>)"
@@ -287,19 +377,29 @@ For each Re-engage draft:
 - `Related Deal`: link
 - `Due Date`: tomorrow
 - `Status = "Not Started"`
-- `Priority` (High/Med/Low to align with DEFCON)
-- `DEFCON` per table
+- `Priority`: align with DEFCON
+- `DEFCON` per criteria above
 - `Category = "Deal Work"`
 - `For Whom = "Chris reviews"`
 - `Source = "Email Draft"`
 - `Source Link`: Gmail draft URL
 - `Source Routine = "Anti-Slip Through the Cracks"`
+- **Page content body**: embed the full draft text inline:
+  ```
+  ## Draft to <recipient name> <recipient email>
+  **Subject:** <subject>
+
+  <full draft body — preserve paragraph breaks>
+
+  ---
+  *Click the Source Link property above to open in Gmail and send.*
+  ```
 
 For each Mark-dead candidate:
 - `Task`: "Approve mark-dead: <Deal name>"
 - `Owed by`: Chris
 - `Due Date`: end of week
-- `DEFCON`: based on table (typically 2 or 3 since needs decision)
+- `DEFCON = "3 - Medium (This Month)"` (decision needed but not immediate revenue)
 - `Category = "Deal Work"`
 - `For Whom = "Chris does it"`
 - `Source = "CRM Review Queue"`
@@ -309,8 +409,8 @@ For each Mark-dead candidate:
 For each Escalate candidate:
 - `Task`: "Escalate <Deal> to James Hong"
 - `Owed by`: Chris
-- `Due Date`: tomorrow
-- `DEFCON = "1 - Critical (Today)"` (escalations are time-sensitive)
+- `Due Date`: this week
+- `DEFCON = "2 - High (This Week)"` (handoff is time-sensitive)
 - `Category = "Rep Management"`
 - `For Whom = "Chris does it"`
 - `Source Link`: CRM Review Queue row URL
