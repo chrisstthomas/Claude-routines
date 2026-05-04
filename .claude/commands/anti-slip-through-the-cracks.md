@@ -270,16 +270,25 @@ The Review Queue is the durable home — no page-per-run.
 
 ## Step 6 — Create 📋 Action Pipeline tasks (DEFCON-prioritized)
 
-DEFCON rules for Anti-Slip-sourced tasks:
+**DEFCON criteria — STRICT (revenue-impact lens):**
 
-| Deal value | Days dark | DEFCON |
-|------------|-----------|--------|
-| ≥$500K stalled | any | **1 - Critical (Today)** |
-| $100K–$500K stalled | any | **2 - High (This Week)** |
-| $50K–$100K stalled | any | **3 - Medium (This Month)** |
-| <$50K stalled | any | **4 - Planned** |
-| At-Risk customer (regardless of value) | any | **2** minimum |
-| Stage 4 deal at risk | any | **1** |
+| DEFCON | Trigger (must match ≥1) |
+|---|---|
+| **1 — Critical (Today)** | At-risk customer trust on the line; Stage 4 deal blocked by Chris's overdue commitment ≥$250K; time-bombed today; missing this week directly loses identifiable revenue. |
+| **2 — High (This Week)** | Active proposal/SOW awaiting Chris ≥$100K; Stage 4 negotiation needing Chris's input; pipeline deal Stalled if not advanced this week. |
+| **3 — Medium (This Month)** | Stalled deal $50K–$100K; partner-sourced exploration; QBRs; sales enablement affecting this quarter. |
+| **4 — Planned** | Stalled deal <$50K; long-tail re-engagement; admin without revenue impact. |
+| **5 — Someday** | Stale items, backlog. |
+
+**Anti-Slip stalled-deal value brackets:**
+- ≥$500K stalled → DEFCON 1
+- $100K–$500K stalled → DEFCON 2
+- $50K–$100K stalled → DEFCON 3
+- <$50K stalled → DEFCON 4
+- Active customer at-risk (any value) → DEFCON 2 minimum
+- Stage 4 deal at-risk → DEFCON 1
+
+**Default-down rule:** ambiguous → pick lower DEFCON. Better to under-flag than over-flag.
 
 For each Re-engage draft:
 - `Task`: "Review re-engagement draft to <contact> (<company>)"
@@ -287,19 +296,29 @@ For each Re-engage draft:
 - `Related Deal`: link
 - `Due Date`: tomorrow
 - `Status = "Not Started"`
-- `Priority` (High/Med/Low to align with DEFCON)
-- `DEFCON` per table
+- `Priority`: align with DEFCON
+- `DEFCON` per criteria above
 - `Category = "Deal Work"`
 - `For Whom = "Chris reviews"`
 - `Source = "Email Draft"`
 - `Source Link`: Gmail draft URL
 - `Source Routine = "Anti-Slip Through the Cracks"`
+- **Page content body**: embed the full draft text inline:
+  ```
+  ## Draft to <recipient name> <recipient email>
+  **Subject:** <subject>
+
+  <full draft body — preserve paragraph breaks>
+
+  ---
+  *Click the Source Link property above to open in Gmail and send.*
+  ```
 
 For each Mark-dead candidate:
 - `Task`: "Approve mark-dead: <Deal name>"
 - `Owed by`: Chris
 - `Due Date`: end of week
-- `DEFCON`: based on table (typically 2 or 3 since needs decision)
+- `DEFCON = "3 - Medium (This Month)"` (decision needed but not immediate revenue)
 - `Category = "Deal Work"`
 - `For Whom = "Chris does it"`
 - `Source = "CRM Review Queue"`
@@ -309,8 +328,8 @@ For each Mark-dead candidate:
 For each Escalate candidate:
 - `Task`: "Escalate <Deal> to James Hong"
 - `Owed by`: Chris
-- `Due Date`: tomorrow
-- `DEFCON = "1 - Critical (Today)"` (escalations are time-sensitive)
+- `Due Date`: this week
+- `DEFCON = "2 - High (This Week)"` (handoff is time-sensitive)
 - `Category = "Rep Management"`
 - `For Whom = "Chris does it"`
 - `Source Link`: CRM Review Queue row URL
