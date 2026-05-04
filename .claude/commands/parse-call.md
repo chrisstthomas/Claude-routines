@@ -67,6 +67,51 @@ DEFCON instead.
 
 ---
 
+## Name Disambiguation (CRITICAL — get this wrong and tasks go to the wrong person)
+
+When a Fireflies transcript or note mentions a first-name-only
+reference, resolve as follows. **Do not guess.** If still ambiguous
+after applying these rules, write a CRM Review Queue row
+(`Type = "Low-confidence contact match"`) instead of routing the
+task to the wrong person.
+
+### "James" — three different people, easy to confuse
+
+| Identifier | Role | Email | Context tips |
+|---|---|---|---|
+| **James Hong** | East Coast AE Lead | james.hong@anthropicidentity.com | Default for "James" in sales / forecast / deal-progression context. Stage 4 deals (Bullridge, G2, Discount Tires, CSBS). Weekly 1:1 with Chris. Sometimes "James H" or "Hong". |
+| **James Bonifield** | Operations / Margins / Delivery | james.bonifield@anthropicidentity.com | Context: "Fulcrum", "milestones", "margins", "ops", "MSA". Inherited most pre-Chris HubSpot deals. Sometimes "James B" or "Bonifield". **NEVER assume "James" = Bonifield without ops context.** |
+| **James Holland** | CEO | james@anthropicidentity.com (no last-name prefix) | Context: equity, hiring approval, board/governance, exec decisions, role restructuring. Sometimes "Holland". The `james@` mailbox is always James Holland. |
+
+### "Chris" — multiple
+
+| Identifier | Role | Email | Context tips |
+|---|---|---|---|
+| **Chris St. Thomas** | CRO, routine owner | christopher@anthropicidentity.com | Default for any "Chris" said by an internal Anthropic Identity employee or in any internal context. |
+| **Chris Norris** | Okta AI Product Team (external) | (external Okta) | Context: Okta, AI product team, MJS Packaging compete deck, Authonomy demo. |
+| **Chris Solomon** | Okta AE on Optro deal (external) | (external Okta) | Context: Optro, Auth0 Advisory. |
+
+### "Andrew" — two different people
+
+| Identifier | Role | Email | Context tips |
+|---|---|---|---|
+| **Andrew Pruitt** | Jabil champion + signed Autonomy advisor | andrew_pruitt@jabil.com | Context: Jabil, resiliency, Marconi/Brazil, Keith Dunn, Zach Huff. |
+| **Andrew DeSomma** | P99 founder (network latency software, external) | (external) | Context: P99, networking, fundraising, "DeSomma/Orlofski" call. |
+
+### "Topher" / "Toph"
+- **Topher Marie** — Anthropic Identity co-founder / Autonomy product owner. Email: topher.marie@anthropicidentity.com. Don't confuse with Christopher (Chris) St. Thomas.
+
+### Disambiguation procedure
+
+1. If transcript metadata or call invite has an **email address**, use that — it's authoritative.
+2. If only first name + context, match the role-context to the right person using the tables above.
+3. If still uncertain → CRM Review Queue,
+   `Type = "Low-confidence contact match"`,
+   Notes: `"Ambiguous '<first name>' — could be A or B. Need clarification before routing tasks."`
+   Do NOT create the Action Pipeline task with a guessed assignment.
+
+---
+
 ## Notion IDs (hardcoded)
 
 - Chris's Internal HQ (parent page):  `35281a33-7504-81a1-833e-ffed81c7328d`

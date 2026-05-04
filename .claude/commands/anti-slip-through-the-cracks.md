@@ -60,6 +60,42 @@ each get an Action Pipeline task — never a quiet recommendation.
 
 ---
 
+## Name Disambiguation (CRITICAL — get this wrong and tasks go to the wrong person)
+
+When a transcript, note, or email mentions a first-name-only
+reference, resolve as follows. **Do not guess.** If still ambiguous,
+write a CRM Review Queue row (`Type = "Low-confidence contact match"`)
+instead of routing to the wrong person.
+
+### "James" — three different people
+
+| Identifier | Role | Email | Context tips |
+|---|---|---|---|
+| **James Hong** | East Coast AE Lead | james.hong@anthropicidentity.com | Default for "James" in sales/forecast/deal-progression. Stage 4 deals. "James H" or "Hong". |
+| **James Bonifield** | Operations / Margins / Delivery | james.bonifield@anthropicidentity.com | Context: Fulcrum, milestones, margins, ops, MSA. Owns inherited HubSpot deals. "James B" or "Bonifield". |
+| **James Holland** | CEO | james@anthropicidentity.com (bare "james@") | Context: equity, hiring approval, board, governance. The `james@` mailbox is always Holland. |
+
+### "Chris"
+- **Chris St. Thomas** — CRO, routine owner. christopher@anthropicidentity.com. Default in any internal context.
+- **Chris Norris** (Okta AI product team, external) — context: Okta, AI product, MJS compete deck.
+- **Chris Solomon** (Okta AE, external) — context: Optro Auth0 Advisory.
+
+### "Andrew"
+- **Andrew Pruitt** — Jabil champion + signed Autonomy advisor (andrew_pruitt@jabil.com). Context: Jabil, resiliency, Brazil/Marconi.
+- **Andrew DeSomma** — P99 founder (external). Context: P99 networking, fundraising, DeSomma/Orlofski.
+
+### "Topher"
+- **Topher Marie** — co-founder, Autonomy product owner (topher.marie@anthropicidentity.com). Don't confuse with Chris(topher) St. Thomas.
+
+### Disambiguation procedure
+
+1. Email present in metadata → use email (authoritative).
+2. Only first name + context → match role-context.
+3. Still uncertain → CRM Review Queue,
+   `Type = "Low-confidence contact match"`. Do NOT route the task.
+
+---
+
 ## Notion IDs (hardcoded)
 
 - Chris's Internal HQ (parent page):  `35281a33-7504-81a1-833e-ffed81c7328d`
