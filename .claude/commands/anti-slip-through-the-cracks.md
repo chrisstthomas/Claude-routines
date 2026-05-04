@@ -242,6 +242,19 @@ prior Anti-Slip run that drafted re-engagement) AND a sent message
 now exists from Chris → set the task `Status = "Done"`,
 `Archived = true`, append Notes "Auto-completed: Chris sent on <date>".
 
+**Stale draft cleanup:** If a Gmail draft also exists to the same
+recipient and is now stale (sent message supersedes it) → routine
+cannot delete drafts via API. Write a CRM Review Queue row,
+`Type = "Other"`, `Suggested Action = "Delete stale Gmail draft
+<draft_id> — superseded by sent message <date>"` so Chris cleans
+up manually.
+
+**Source Link format (always):**
+Source Link on every Email-Draft Action Pipeline task MUST be the
+Gmail draft URL: `https://mail.google.com/mail/u/0/#drafts/<draft_id>`
+where `<draft_id>` is the Gmail draft ID. Never substitute another
+URL — Chris needs one-click-to-send.
+
 ---
 
 ## Step 3 — Diagnose

@@ -345,7 +345,20 @@ topic/deal context → **DO NOT create a new draft.** Instead:
    row that's still open → set its `Status = "Done"` and
    `Archived = true` with Notes "Auto-completed: matching sent message
    detected during pre-draft sweep on <date>".
-3. Skip the draft creation step entirely.
+3. **If a stale Gmail draft also exists** (older draft to same recipient
+   covering the same topic) → routine cannot delete drafts via API.
+   Write a CRM Review Queue row, `Type = "Other"`,
+   `Suggested Action = "Delete stale Gmail draft <draft_id> — superseded
+   by sent message <date>"` so Chris can clean it up manually.
+4. Skip the draft creation step entirely.
+
+**Source Link format (always — both routines):**
+The Source Link property on every Email-Draft Action Pipeline task
+MUST be the Gmail draft URL in this exact format:
+`https://mail.google.com/mail/u/0/#drafts/<draft_id>`
+where `<draft_id>` is returned by Gmail's create_draft API. Never
+substitute the HubSpot task URL or Fireflies URL — that defeats the
+one-click-to-send workflow.
 
 This prevents Parse Call from filling Chris's drafts folder with
 duplicates after he already sent something. Same applies for
