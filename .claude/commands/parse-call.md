@@ -291,19 +291,29 @@ Ambiguous → CRM Review Queue, `Type = "Ambiguous action item"`.
 
 ### Create 📋 Action Pipeline tasks (KEY STEP)
 
-For each action item Chris committed to OR every email draft created:
+**DEFCON criteria — STRICT (revenue-impact lens):**
 
-| Source | Category | For Whom | DEFCON guidance |
-|--------|----------|----------|-----------------|
-| Action item Chris promised on call, due today/tomorrow | Deal Work | Chris does it | **1 - Critical (Today)** |
-| Action item due this week | Deal Work | Chris does it | **2 - High (This Week)** |
-| Action item due this month | Deal Work | Chris does it | **3 - Medium (This Month)** |
-| Email draft awaiting Chris review | Deal Work | Chris reviews | **2 - High (This Week)** |
-| Stage 4 / negotiation deal task | Deal Work | Chris does it | **1 or 2** |
-| Action item Chris owes a partner / customer | Deal Work | Chris owes others | based on due date |
-| Action item assigned to a rep, due-back to Chris | Rep Management | Rep owes Chris | based on due date |
-| Internal admin (paperwork, system setup) | Admin | Chris does it | **3** default |
-| Strategy / planning | Strategic | Chris does it | **3 or 4** |
+| DEFCON | Trigger (must match ≥1, otherwise drop a level) |
+|---|---|
+| **1 — Critical (Today)** | At-risk customer trust on the line; Stage 4 deal blocked by Chris's overdue commitment ≥$250K; time-bombed (signature/board today); customer reply-deadline today; missing this week directly loses identifiable revenue. |
+| **2 — High (This Week)** | Active proposal/SOW awaiting Chris ≥$100K; champion expecting concrete deliverable this week; pipeline deal Stalled if not advanced; Stage 4 negotiation needing Chris's input; scheduled exec-sponsor call/event this week. |
+| **3 — Medium (This Month)** | Top-of-funnel intros, partner sourcing, qualification; discovery-stage deals; strategic partner exploration without direct $ this Q; QBRs; sales enablement materially affecting current-quarter execution. |
+| **4 — Planned** | Strategic initiatives 30-90d out; sales training; hiring follow-throughs; Q+1 planning; internal admin paperwork without revenue impact; "should happen but nothing falls if it slips a week". |
+| **5 — Someday** | Personal admin; aspirational/optional; backlog clutter; stale items pending review. |
+
+**Default-down rule:** if ambiguous between two levels, **always pick the lower-priority one**. Better to under-flag than over-flag — Chris promotes manually if needed.
+
+**Category mapping:**
+
+| Source | Category | For Whom |
+|--------|----------|----------|
+| Action item Chris promised, deal-related | Deal Work | Chris does it |
+| Email draft awaiting Chris review | Deal Work | Chris reviews |
+| Action item Chris owes a partner / customer | Deal Work | Chris owes others |
+| Action item assigned to a rep, due-back to Chris | Rep Management | Rep owes Chris |
+| Internal admin (paperwork, system setup) | Admin | Chris does it |
+| Strategy / planning | Strategic | Chris does it |
+| Rep coaching / sales enablement | Rep Management | Chris does it |
 
 Required fields:
 - `Task` (verb-led)
@@ -312,7 +322,7 @@ Required fields:
 - `Due Date`
 - `Status = "Not Started"`
 - `Priority` (High/Med/Low — coarser than DEFCON)
-- `DEFCON` (per table above)
+- `DEFCON` (per criteria above — apply default-down rule)
 - `Category`
 - `For Whom`
 - `Source = "Call"` (or "Email Draft" for drafts)
@@ -332,10 +342,29 @@ Strict drafting rules:
 - End with one concrete ask + a date
 
 For EACH draft created:
-1. Create Action Pipeline task (`Source = "Email Draft"`,
-   `For Whom = "Chris reviews"`, `DEFCON = "2 - High (This Week)"`,
-   `Due Date = tomorrow`, `Source Link = Gmail draft URL`).
-2. Write Activity row (`Type = "Draft Created"`,
+1. Create Action Pipeline task with:
+   - `Task` = "Review draft to <contact name> (<company>)"
+   - `Source = "Email Draft"`
+   - `For Whom = "Chris reviews"`
+   - `DEFCON` per the strict criteria above (NOT always 2 — apply
+     default-down rule based on the underlying deal's revenue
+     impact and timing)
+   - `Due Date = tomorrow`
+   - `Source Link = Gmail draft URL`
+2. **Embed the full draft body** in the task's page content (not
+   just the link), formatted as:
+   ```
+   ## Draft to <recipient name> <recipient email>
+   **Subject:** <subject>
+
+   <full draft body — preserve paragraph breaks>
+
+   ---
+   *Click the Source Link property above to open in Gmail and send.*
+   ```
+   This way Chris reads the draft inline in Notion without leaving
+   the task; clicks Source Link only to send.
+3. Write Activity row (`Type = "Draft Created"`,
    `Source = "Gmail"`, `Source Link = Gmail draft URL`,
    `Summary = first 200 chars of draft body`).
 
