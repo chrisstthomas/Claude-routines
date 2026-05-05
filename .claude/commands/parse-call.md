@@ -46,10 +46,54 @@ task. Every email this routine drafts → one Action Pipeline "Review
 draft" task with the Gmail draft URL in `Source Link`. Drafts go to
 Gmail Drafts, **never auto-sent** (except verified intros). When Chris
 actually sends the email later, the next run of this routine detects
-it and auto-completes the task (see "Task Lifecycle" below). If you
-ever skip creating a task because the action item is "small" or
-"obvious", you have failed the contract — create the task with a low
-DEFCON instead.
+it and auto-completes the task (see "Task Lifecycle" below). When a
+stale draft is detected, **delete it via Zapier** so Chris's drafts
+folder stays clean. If you ever skip creating a task because the
+action item is "small" or "obvious", you have failed the contract —
+create the task with a low DEFCON instead.
+
+---
+
+## Connector strategy — Zapier primary, Anthropic fallback
+
+This routine runs against TWO connector layers. **Try Zapier MCP first.
+If a Zapier call errors (timeout, auth failure, schema error, "tool
+not loaded", or the action isn't available in Zapier), log
+`Connectors Down: Zapier` on the Run row and fall back to the
+corresponding Anthropic MCP for that single call. Continue trying
+Zapier on subsequent calls.**
+
+Some Zapier connectors will simply not exist (because Chris hasn't
+enabled them in his Zapier MCP config to control cost). When the
+Zapier tool isn't loaded, treat that as a soft fallback to Anthropic
+without flagging Connectors Down — it's expected behavior.
+
+**Zapier MCP namespace:** `mcp__zapier__*`
+Likely-enabled actions (verify against actual MCP schema at runtime):
+- Gmail: `delete_draft`, `send_draft`, `trash_message`, `create_draft`,
+  `search_messages`, `get_draft`, `get_message`
+- Slack: `send_message`, `send_dm`, `post_thread_reply`
+- Apollo: search/sequence actions when added
+
+**Anthropic MCPs (fallback + primary for what Zapier doesn't cover):**
+`mcp__Notion__*`, `mcp__HubSpot__*`, `mcp__Gmail__*`, `mcp__Drive__*`,
+`mcp__Calendar__*`, `mcp__Fireflies__*`, `mcp__Slack__*`,
+`mcp__github__*`
+
+**Required (no fallback exists):** Fireflies (transcripts only via
+Anthropic MCP), GitHub (instruction fetch).
+
+**Optional connectors** (don't fail run on outage): Apollo (skip
+enrichment), Slack (skip user-side messaging until restored).
+
+**On total Zapier outage** (≥3 consecutive Zapier calls fail in same
+run): set `Connectors Down: Zapier` once, route all remaining Zapier-
+preferred calls this run to Anthropic, continue. Do NOT abandon the
+run.
+
+**On Anthropic MCP failure during fallback:** if the fallback ALSO
+fails, treat as a hard error: write Status=Failed on Run row with
+`Connectors Down: Zapier, <Anthropic MCP>`, exit.
 
 ---
 
@@ -346,10 +390,15 @@ topic/deal context → **DO NOT create a new draft.** Instead:
    `Archived = true` with Notes "Auto-completed: matching sent message
    detected during pre-draft sweep on <date>".
 3. **If a stale Gmail draft also exists** (older draft to same recipient
-   covering the same topic) → routine cannot delete drafts via API.
-   Write a CRM Review Queue row, `Type = "Other"`,
-   `Suggested Action = "Delete stale Gmail draft <draft_id> — superseded
-   by sent message <date>"` so Chris can clean it up manually.
+   covering the same topic) → **DELETE IT** via Zapier:
+   - Primary: `mcp__zapier__gmail_delete_draft` with `draft_id: <id>`
+   - On success: write Activity (`Type = "Other"`,
+     `Summary = "Deleted stale draft <id> — superseded by sent message
+     <date>"`)
+   - **Fallback (Zapier down or action unavailable):** route to CRM
+     Review Queue with `Type = "Other"`,
+     `Suggested Action = "Manually delete stale Gmail draft <draft_id>
+     — superseded by sent message <date>"`
 4. Skip the draft creation step entirely.
 
 **Source Link format (always — both routines):**
@@ -529,10 +578,15 @@ For every Action Pipeline row with `Source = "Email Draft"` AND
    (`https://mail.google.com/mail/u/0/#drafts/<id>`).
 2. Search Gmail Sent for a message to the same recipient with the
    matching subject/body in the last 14 days.
+   Primary: `mcp__zapier__gmail_search_messages`. Fallback:
+   `mcp__Gmail__search_threads`.
 3. **Sent message found** → set `Status = "Done"`, append to Notes
    "Auto-completed: email sent <date>", write Activity
    (`Type = "Email Sent"`, `Source = "Gmail"`,
-   `Source Link = <sent message URL>`).
+   `Source Link = <sent message URL>`). **Then DELETE the stale draft**
+   via `mcp__zapier__gmail_delete_draft`. If Zapier delete unavailable
+   (action not exposed), route to CRM Review Queue with
+   `Suggested Action = "Manually delete stale Gmail draft <draft_id>"`.
 4. **Draft gone but no sent message** → leave alone (deleted, not
    sent — Chris can manually mark Cancelled if needed).
 5. **Draft still exists** → leave alone (still pending review).
@@ -571,6 +625,13 @@ auto-disappear from the active board.
 - HubSpot meeting summaries ≤400 words. Notion summaries ≤300.
   Activity Summaries ≤200.
 - Always tag writes with `Source Routine = "Parse Call"`.
+- **Connector strategy:** always try Zapier first (when the Zapier
+  action is available), fall back to Anthropic on error, log
+  Connectors Down. Treat Zapier-action-not-available as silent
+  fallback to Anthropic (no Connectors Down flag).
+- **Stale-draft deletion:** delete via Zapier when possible. If Zapier
+  is down or delete-draft action isn't exposed, FLAG via CRM Review
+  Queue. Do not leave Chris with invisible cleanup.
 
 ---
 
