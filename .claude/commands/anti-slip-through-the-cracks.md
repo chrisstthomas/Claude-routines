@@ -83,11 +83,12 @@ Zapier-preferred calls to Anthropic, log once, continue.
 ## Identity
 
 - Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
+- **CEO: James Bonifield** — james@anthropicidentity.com (signs as "James Bonifield, CEO & Managing Partner")
 - Internal domain: @anthropicidentity.com
 - Known partner (skip CRM creation): Liam Glennie
-- Internal team: Topher Marie, James Hong, James Bonifield, Harry
+- Internal team: Topher Marie, James Hong, James Bonifield (CEO), Harry
   Lambert, Jesse Johnson, Sunbid Shrestha, Robert Bennett, Emily Cho,
-  Diego Koga, Julie Harris, Heather Gowrie, James Holland (CEO)
+  Diego Koga, Julie Harris, Heather Gowrie
 - Timezone: America/New_York
 
 ---
@@ -99,13 +100,12 @@ reference, resolve as follows. **Do not guess.** If still ambiguous,
 write a CRM Review Queue row (`Type = "Low-confidence contact match"`)
 instead of routing to the wrong person.
 
-### "James" — three different people
+### "James" — two different people
 
 | Identifier | Role | Email | Context tips |
 |---|---|---|---|
 | **James Hong** | East Coast AE Lead | james.hong@anthropicidentity.com | Default for "James" in sales/forecast/deal-progression. Stage 4 deals. "James H" or "Hong". |
-| **James Bonifield** | Operations / Margins / Delivery | james.bonifield@anthropicidentity.com | Context: Fulcrum, milestones, margins, ops, MSA. Owns inherited HubSpot deals. "James B" or "Bonifield". |
-| **James Holland** | CEO | james@anthropicidentity.com (bare "james@") | Context: equity, hiring approval, board, governance. The `james@` mailbox is always Holland. |
+| **James Bonifield** | **CEO & Managing Partner** | **james@anthropicidentity.com** | Context: equity, hiring approval, board, governance, MSA, Fulcrum, milestones, margins, ops. Owns inherited HubSpot deals. The `james@` mailbox is always Bonifield. **(There is no "James Holland" — prior misread; do not use that name.)** |
 
 ### "Chris"
 - **Chris St. Thomas** — CRO, routine owner. christopher@anthropicidentity.com. Default in any internal context.
@@ -224,10 +224,27 @@ When creating a new Deal:
   system. Without this step, Opportunity Notes appears disconnected.
 - Treat as Active candidate for re-engagement evaluation.
 
-### 1C. HubSpot dormant customers
-Pull HubSpot contacts where `lifecyclestage = customer` AND
-`hs_last_sales_activity_timestamp > 30 days` AND no Active Deal
-record exists. Skip if associated deal is closed-lost.
+### 1C. HubSpot dormant customers + closed-lost lookback (HubSpot read-only)
+
+**This is the ONLY place HubSpot is consulted by either routine.**
+HubSpot is read-only — never write back. Use it to pull historical
+context that doesn't live in Notion yet:
+
+- Pull HubSpot contacts where `lifecyclestage = customer` AND
+  `hs_last_sales_activity_timestamp > 30 days` AND no Active Deal
+  record exists. These are dormant customers worth an Anti-Slip pass.
+- Pull HubSpot deals where `dealstage = closedlost` (former deals
+  for historical reference). When matched against a current candidate
+  by company name, surface the closed-lost context in the diagnosis
+  to prevent accidentally re-pursuing a dead account. If no matching
+  Notion Deals row exists, ingest the closed-lost deal as
+  `Status Flag = "Dead"`, `Stage = "Lost"` with HubSpot Deal ID
+  captured.
+- Pull HubSpot deals where `dealstage = closedwon` (historical
+  customers). When a matching Notion Deal doesn't exist for a closed-
+  won customer that's gone dormant, route to CRM Review Queue with
+  `Suggested Action = "Confirm <Customer> is still active; create
+  Deal if expansion potential"`.
 
 ### Rank and cap
 Combine. Sort: Amount desc, then Last Activity asc. Cap at 15.
@@ -593,12 +610,15 @@ the next run (see Step 10).
 
 - Never message anyone replied-to in last 14 days.
 - Never auto-send (drafts only).
-- Never mark dead without Chris's explicit per-item approval.
+- Never mark dead without Chris's explicit per-item approval (in
+  Notion). Note: closed-lost deals from HubSpot/Sales Home DO ingest
+  as Status Flag=Dead automatically — that's different from marking
+  an active deal dead.
 - Never recycle sentence structure across drafts.
 - Never message anyone with `hs_email_optout = true`.
-- Never add closed-lost deals to Notion Deals DB.
-- Never create a Deal without recent activity (90 days);
-  route to CRM Review Queue instead.
+- **HubSpot is read-only** for this routine. No writes. Use only for
+  Step 1C (dormant customers + closed-lost/won historical lookback).
+- **Notion is the source of truth** for active deals and contacts.
 - If notes are thin, say so — never invent context.
 - Don't reach out to anyone touched by Parse Call in last 48h.
 - Don't message anyone Parse Call already drafted to in last 14d.

@@ -100,13 +100,13 @@ fails, treat as a hard error: write Status=Failed on Run row with
 ## Identity
 
 - Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
+- **CEO: James Bonifield** — james@anthropicidentity.com (the bare `james@` mailbox is his; signs as "James Bonifield, CEO & Managing Partner")
 - Internal domain: @anthropicidentity.com
 - Known partner (skip CRM creation, note in summary): Liam Glennie
   (liam.glennie@anthropicidentity.com, liamglennie@gmail.com)
-- Internal team: Topher Marie, James Hong, James Bonifield, Harry
-  Lambert, Jesse Johnson, Sunbid Shrestha, Robert Bennett, Emily Cho,
-  Diego Koga, Julie Harris, Heather Gowrie, James Holland (CEO,
-  james@anthropicidentity.com)
+- Internal team: Topher Marie, James Hong, James Bonifield (CEO),
+  Harry Lambert, Jesse Johnson, Sunbid Shrestha, Robert Bennett,
+  Emily Cho, Diego Koga, Julie Harris, Heather Gowrie
 - Timezone: America/New_York
 
 ---
@@ -119,13 +119,12 @@ after applying these rules, write a CRM Review Queue row
 (`Type = "Low-confidence contact match"`) instead of routing the
 task to the wrong person.
 
-### "James" — three different people, easy to confuse
+### "James" — two different people, easy to confuse
 
 | Identifier | Role | Email | Context tips |
 |---|---|---|---|
 | **James Hong** | East Coast AE Lead | james.hong@anthropicidentity.com | Default for "James" in sales / forecast / deal-progression context. Stage 4 deals (Bullridge, G2, Discount Tires, CSBS). Weekly 1:1 with Chris. Sometimes "James H" or "Hong". |
-| **James Bonifield** | Operations / Margins / Delivery | james.bonifield@anthropicidentity.com | Context: "Fulcrum", "milestones", "margins", "ops", "MSA". Inherited most pre-Chris HubSpot deals. Sometimes "James B" or "Bonifield". **NEVER assume "James" = Bonifield without ops context.** |
-| **James Holland** | CEO | james@anthropicidentity.com (no last-name prefix) | Context: equity, hiring approval, board/governance, exec decisions, role restructuring. Sometimes "Holland". The `james@` mailbox is always James Holland. |
+| **James Bonifield** | **CEO & Managing Partner** | **james@anthropicidentity.com** (bare `james@`) | Context: equity, hiring approval, board, governance, MSA, Fulcrum, milestones, margins, ops. Owns inherited HubSpot deals from before Chris joined. Sometimes "JB" or "Bonifield". The `james@` mailbox is **always** Bonifield. **(There is no "James Holland" — that was a prior misread; do not use that name.)** |
 
 ### "Chris" — multiple
 
@@ -245,23 +244,10 @@ A run that finds nothing still writes a No-op row.
 ### Identify participants
 - Internal `@anthropicidentity.com` → no CRM action
 - Liam Glennie → no CRM creation, note in summary
-- External → continue
+- External → continue (apply name disambiguation table above)
 
-### Resolve / create / update HubSpot contacts
+### Resolve / create / update Notion Contacts (PRIMARY for participant tracking)
 For each external participant:
-1. Search HubSpot by exact email. Match → UPDATE.
-2. No email match: search by `firstname + lastname + company`.
-   Match → UPDATE.
-3. No match but email + name + company all known → CREATE.
-4. Otherwise → CRM Review Queue row,
-   `Type = "Low-confidence contact match"`,
-   `Source Routine = "Parse Call"`. No phantom contacts.
-
-Fields: firstname, lastname, email, phone (Apollo enrichment if up),
-jobtitle, company, hs_lead_status, lifecyclestage.
-
-### Resolve / create / update Notion Contacts (NEW)
-For each external participant after HubSpot resolution:
 1. Search Contacts DB by exact email match.
 2. Match → UPDATE Last Touch = meeting date,
    Last Touch Source = "Parse Call".
@@ -269,24 +255,29 @@ For each external participant after HubSpot resolution:
    - Name, Email, Title (from transcript), Company, Phone, LinkedIn
      (if mentioned), Owner = Chris (or matching Rep),
      Last Touch = meeting date, Last Touch Source = "Parse Call",
-     HubSpot Contact ID, Source Routine = "Parse Call".
+     HubSpot Contact ID (if known from prior session — leave blank if
+     new), Source Routine = "Parse Call".
 
-### Resolve / create / update HubSpot companies
-Match by email domain or exact company name. No match → CREATE.
-Apollo enrichment if up; otherwise transcript-only.
+**HubSpot is NOT used by Parse Call.** Notion is the source of truth
+for active contacts and deals. HubSpot is only consulted by Anti-Slip
+for historical/closed-deal context. Do not write to HubSpot from this
+routine — no contact creates, no company creates, no meeting log, no
+HubSpot task creates. All capture goes into Notion.
 
 ### Update / create the 📊 Deals record (KEY STEP)
 
-**Filter rules — strictly enforce:**
-- If HubSpot deal `dealstage = closedlost` → SKIP entirely. Closed
-  lost deals NEVER enter the Notion Deals DB.
+**Filter rules:**
+- **Closed-lost deals ARE tracked in Notion** with `Status Flag = "Dead"`
+  and `Stage = "Lost"`. They're filtered out of active dashboards via
+  Status Flag but remain in the DB for historical reference and to
+  prevent accidental re-engagement.
 - If creating a new Deal: there must be recent activity (this
   transcript counts). Stale deals with no activity in 90+ days don't
   get auto-created — they go to CRM Review Queue for Chris's review.
 
-For each external contact, query Deals DB for an Active or At-Risk
-deal where Primary Contact Email = participant email OR Company =
-participant company.
+For each external contact, query Deals DB for an existing deal where
+Primary Contact Email = participant email OR Company = participant
+company.
 
 **One match:**
 - Set `Last Activity = meeting date`,
@@ -303,7 +294,7 @@ participant company.
   `Suggested Action = "Advance <Deal> from <stage> to <new stage>: <evidence>"`.
   Do NOT auto-advance.
 
-**No match but strong opportunity AND not closed-lost:**
+**No match but strong opportunity:**
 - CRM Review Queue, `Type = "Stale deal"` or `"Other"`,
   `Suggested Action = "Consider creating Deal: <reason, timeline, amount>"`.
 
