@@ -14,8 +14,10 @@ $ARGUMENTS
 This is one of two routines that together form Chris's **sales brain**.
 The brain has three surfaces:
 
-  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage, only
-     active / at-risk; closed-lost deals never enter)
+  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage; active
+     dashboard filters Status Flag = Active / At Risk, but closed-
+     lost deals ARE stored with Status Flag = Dead for historical
+     reference and to prevent accidental re-pursuit)
   2. **Action Pipeline** — `📋 Chris's Action Pipeline` DB (DEFCON
      1–5 funnel of what Chris must do, can review, or is owed)
   3. **Activity Feed** — `📜 Activities` DB (every event = one row,
@@ -83,11 +85,12 @@ Zapier-preferred calls to Anthropic, log once, continue.
 ## Identity
 
 - Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
+- **CEO: James Bonifield** — james@anthropicidentity.com (signs as "James Bonifield, CEO & Managing Partner")
 - Internal domain: @anthropicidentity.com
 - Known partner (skip CRM creation): Liam Glennie
-- Internal team: Topher Marie, James Hong, James Bonifield, Harry
+- Internal team: Topher Marie, James Hong, James Bonifield (CEO), Harry
   Lambert, Jesse Johnson, Sunbid Shrestha, Robert Bennett, Emily Cho,
-  Diego Koga, Julie Harris, Heather Gowrie, James Holland (CEO)
+  Diego Koga, Julie Harris, Heather Gowrie
 - Timezone: America/New_York
 
 ---
@@ -99,13 +102,12 @@ reference, resolve as follows. **Do not guess.** If still ambiguous,
 write a CRM Review Queue row (`Type = "Low-confidence contact match"`)
 instead of routing to the wrong person.
 
-### "James" — three different people
+### "James" — two different people
 
 | Identifier | Role | Email | Context tips |
 |---|---|---|---|
 | **James Hong** | East Coast AE Lead | james.hong@anthropicidentity.com | Default for "James" in sales/forecast/deal-progression. Stage 4 deals. "James H" or "Hong". |
-| **James Bonifield** | Operations / Margins / Delivery | james.bonifield@anthropicidentity.com | Context: Fulcrum, milestones, margins, ops, MSA. Owns inherited HubSpot deals. "James B" or "Bonifield". |
-| **James Holland** | CEO | james@anthropicidentity.com (bare "james@") | Context: equity, hiring approval, board, governance. The `james@` mailbox is always Holland. |
+| **James Bonifield** | **CEO & Managing Partner** | **james@anthropicidentity.com** | Context: equity, hiring approval, board, governance, MSA, Fulcrum, milestones, margins, ops. Owns inherited HubSpot deals. The `james@` mailbox is always Bonifield. **(There is no "James Holland" — prior misread; do not use that name.)** |
 
 ### "Chris"
 - **Chris St. Thomas** — CRO, routine owner. christopher@anthropicidentity.com. Default in any internal context.
@@ -205,16 +207,20 @@ Filter `Status Flag IN [Active, At Risk]`. Flag any where:
 Look in Opportunity Notes and Proposals & SOWs for entries with no
 matching Deals DB row.
 
-**Filter rules — strictly enforce:**
-- Skip if Sales Home Stage = "Closed Lost" or "Declined by Client"
-  → these never enter Deals DB.
-- Require recent activity (note within 90 days) to create a new
-  Deal. Stale Sales Home entries with no recent note do NOT auto-
-  create — go to CRM Review Queue with
-  `Type = "Stale deal"` and `Suggested Action = "Confirm whether
-  <Deal> is still alive before creating Deals row"`.
+**Filter rules:**
+- **Closed-lost / declined entries DO ingest** — but with
+  `Status Flag = "Dead"` and `Stage = "Lost"` (or
+  `Stage = "Disqualified"` for Declined by Client). These rows are
+  filtered out of the active dashboard via Status Flag but stored for
+  historical reference and to prevent accidental re-pursuit. Do NOT
+  draft re-engagement messages for closed-lost deals.
+- For active / in-flight Sales Home entries: require recent activity
+  (note within 90 days) to auto-create a new Deal. Stale entries
+  with no recent note → CRM Review Queue with `Type = "Stale deal"`
+  and `Suggested Action = "Confirm whether <Deal> is still alive
+  before creating Deals row"`.
 
-When creating a new Deal:
+When creating a new Deal (any Status Flag):
 - Set `Source Routine = "Anti-Slip Through the Cracks"` (or
   "Backfill" for first-run).
 - Set `Sales Home Source URL` to the Notion page URL.
@@ -222,12 +228,31 @@ When creating a new Deal:
   point at the new Deal (relation, DUAL). This is what makes the
   Sales Home Opportunity Notes view actually reference the new HQ
   system. Without this step, Opportunity Notes appears disconnected.
-- Treat as Active candidate for re-engagement evaluation.
+- For Active / At-Risk: treat as candidate for re-engagement
+  evaluation. For Dead: stop after creation; no draft, no Action
+  Pipeline task beyond optional historical-backfill activity.
 
-### 1C. HubSpot dormant customers
-Pull HubSpot contacts where `lifecyclestage = customer` AND
-`hs_last_sales_activity_timestamp > 30 days` AND no Active Deal
-record exists. Skip if associated deal is closed-lost.
+### 1C. HubSpot dormant customers + closed-lost lookback (HubSpot read-only)
+
+**This is the ONLY place HubSpot is consulted by either routine.**
+HubSpot is read-only — never write back. Use it to pull historical
+context that doesn't live in Notion yet:
+
+- Pull HubSpot contacts where `lifecyclestage = customer` AND
+  `hs_last_sales_activity_timestamp > 30 days` AND no Active Deal
+  record exists. These are dormant customers worth an Anti-Slip pass.
+- Pull HubSpot deals where `dealstage = closedlost` (former deals
+  for historical reference). When matched against a current candidate
+  by company name, surface the closed-lost context in the diagnosis
+  to prevent accidentally re-pursuing a dead account. If no matching
+  Notion Deals row exists, ingest the closed-lost deal as
+  `Status Flag = "Dead"`, `Stage = "Lost"` with HubSpot Deal ID
+  captured.
+- Pull HubSpot deals where `dealstage = closedwon` (historical
+  customers). When a matching Notion Deal doesn't exist for a closed-
+  won customer that's gone dormant, route to CRM Review Queue with
+  `Suggested Action = "Confirm <Customer> is still active; create
+  Deal if expansion potential"`.
 
 ### Rank and cap
 Combine. Sort: Amount desc, then Last Activity asc. Cap at 15.
@@ -593,12 +618,15 @@ the next run (see Step 10).
 
 - Never message anyone replied-to in last 14 days.
 - Never auto-send (drafts only).
-- Never mark dead without Chris's explicit per-item approval.
+- Never mark dead without Chris's explicit per-item approval (in
+  Notion). Note: closed-lost deals from HubSpot/Sales Home DO ingest
+  as Status Flag=Dead automatically — that's different from marking
+  an active deal dead.
 - Never recycle sentence structure across drafts.
 - Never message anyone with `hs_email_optout = true`.
-- Never add closed-lost deals to Notion Deals DB.
-- Never create a Deal without recent activity (90 days);
-  route to CRM Review Queue instead.
+- **HubSpot is read-only** for this routine. No writes. Use only for
+  Step 1C (dormant customers + closed-lost/won historical lookback).
+- **Notion is the source of truth** for active deals and contacts.
 - If notes are thin, say so — never invent context.
 - Don't reach out to anyone touched by Parse Call in last 48h.
 - Don't message anyone Parse Call already drafted to in last 14d.
@@ -614,9 +642,11 @@ the next run (see Step 10).
 
 ## Out of scope
 - Auto-sending
-- Marking dead without approval
+- Marking active deals dead without approval (closed-lost ingestion
+  from Sales Home / HubSpot is automatic and separate)
 - Reaching out to active deals (Parse Call's job)
 - Reaching out to Do Not Contact
-- Creating closed-lost Deal records
+- Drafting re-engagement messages for closed-lost / Dead-flagged
+  deals — they ingest as historical reference only
 
 Begin now.

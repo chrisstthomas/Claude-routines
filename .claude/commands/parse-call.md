@@ -13,8 +13,10 @@ $ARGUMENTS
 This is one of two routines that together form Chris's **sales brain**.
 The brain has three surfaces:
 
-  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage, only
-     active / at-risk; closed-lost deals never enter)
+  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage; the
+     active dashboard filters Status Flag = Active / At Risk, but
+     closed-lost deals ARE stored in the DB with Status Flag = Dead
+     for historical reference)
   2. **Action Pipeline** — `📋 Chris's Action Pipeline` DB (DEFCON
      1–5 funnel of what Chris must do, can review, or is owed)
   3. **Activity Feed** — `📜 Activities` DB (every call, email, draft,
@@ -24,11 +26,16 @@ The brain has three surfaces:
 Parse Call's job: turn every call Chris just had into:
 - a logged Activity for the relevant Deal,
 - updated Contact records (and Contact → Deal links),
-- updated HubSpot meeting / contact / company records,
+- updated Notion Deal record (Last Activity, Notes, stage-change flags
+  for review),
 - a follow-up email draft in Gmail,
 - DEFCON-prioritized Action Pipeline tasks for everything Chris must
   do or review,
 - Notion meeting notes for internal calls.
+
+**HubSpot is NOT touched by this routine.** All capture goes into
+Notion. HubSpot is read-only and consulted only by Anti-Slip Through
+the Cracks for closed-lost / closed-won historical lookback.
 
 The companion routine ("Anti-Slip Through the Cracks") catches deals
 that have gone silent. Stay in your lane: Parse Call works calls that
@@ -100,13 +107,13 @@ fails, treat as a hard error: write Status=Failed on Run row with
 ## Identity
 
 - Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
+- **CEO: James Bonifield** — james@anthropicidentity.com (the bare `james@` mailbox is his; signs as "James Bonifield, CEO & Managing Partner")
 - Internal domain: @anthropicidentity.com
 - Known partner (skip CRM creation, note in summary): Liam Glennie
   (liam.glennie@anthropicidentity.com, liamglennie@gmail.com)
-- Internal team: Topher Marie, James Hong, James Bonifield, Harry
-  Lambert, Jesse Johnson, Sunbid Shrestha, Robert Bennett, Emily Cho,
-  Diego Koga, Julie Harris, Heather Gowrie, James Holland (CEO,
-  james@anthropicidentity.com)
+- Internal team: Topher Marie, James Hong, James Bonifield (CEO),
+  Harry Lambert, Jesse Johnson, Sunbid Shrestha, Robert Bennett,
+  Emily Cho, Diego Koga, Julie Harris, Heather Gowrie
 - Timezone: America/New_York
 
 ---
@@ -119,13 +126,12 @@ after applying these rules, write a CRM Review Queue row
 (`Type = "Low-confidence contact match"`) instead of routing the
 task to the wrong person.
 
-### "James" — three different people, easy to confuse
+### "James" — two different people, easy to confuse
 
 | Identifier | Role | Email | Context tips |
 |---|---|---|---|
 | **James Hong** | East Coast AE Lead | james.hong@anthropicidentity.com | Default for "James" in sales / forecast / deal-progression context. Stage 4 deals (Bullridge, G2, Discount Tires, CSBS). Weekly 1:1 with Chris. Sometimes "James H" or "Hong". |
-| **James Bonifield** | Operations / Margins / Delivery | james.bonifield@anthropicidentity.com | Context: "Fulcrum", "milestones", "margins", "ops", "MSA". Inherited most pre-Chris HubSpot deals. Sometimes "James B" or "Bonifield". **NEVER assume "James" = Bonifield without ops context.** |
-| **James Holland** | CEO | james@anthropicidentity.com (no last-name prefix) | Context: equity, hiring approval, board/governance, exec decisions, role restructuring. Sometimes "Holland". The `james@` mailbox is always James Holland. |
+| **James Bonifield** | **CEO & Managing Partner** | **james@anthropicidentity.com** (bare `james@`) | Context: equity, hiring approval, board, governance, MSA, Fulcrum, milestones, margins, ops. Owns inherited HubSpot deals from before Chris joined. Sometimes "JB" or "Bonifield". The `james@` mailbox is **always** Bonifield. **(There is no "James Holland" — that was a prior misread; do not use that name.)** |
 
 ### "Chris" — multiple
 
@@ -191,8 +197,10 @@ Tag every write with `Source Routine = "Parse Call"`.
 
 ## Connector resilience (CRITICAL)
 
-**Required:** Fireflies, HubSpot, Notion, Google Calendar, Gmail.
+**Required:** Fireflies, Notion, Google Calendar, Gmail.
 **Optional:** Apollo, Google Contacts, Slack.
+**Not used:** HubSpot (Parse Call neither reads nor writes HubSpot —
+that's Anti-Slip's read-only domain).
 
 Optional connector errors → log to Connectors Down, skip dependent
 steps, continue.
@@ -221,8 +229,8 @@ exit. Do not retry.
 - `Status`: Success / Partial / No-op / Failed
 - `Finished At`: now
 - `Items Processed`: transcripts examined
-- `Items Created`: drafts + Notion pages + HubSpot records + Action
-  Pipeline tasks + Activities + Deal updates
+- `Items Created`: drafts + Notion pages + Action Pipeline tasks +
+  Activities + Deal updates + Contact updates
 - `Items Skipped`: personal/partner-only/empty/closed-lost
 - `Connectors Down`
 - `Summary` ≤300 words: one bullet per transcript with title +
@@ -245,23 +253,10 @@ A run that finds nothing still writes a No-op row.
 ### Identify participants
 - Internal `@anthropicidentity.com` → no CRM action
 - Liam Glennie → no CRM creation, note in summary
-- External → continue
+- External → continue (apply name disambiguation table above)
 
-### Resolve / create / update HubSpot contacts
+### Resolve / create / update Notion Contacts (PRIMARY for participant tracking)
 For each external participant:
-1. Search HubSpot by exact email. Match → UPDATE.
-2. No email match: search by `firstname + lastname + company`.
-   Match → UPDATE.
-3. No match but email + name + company all known → CREATE.
-4. Otherwise → CRM Review Queue row,
-   `Type = "Low-confidence contact match"`,
-   `Source Routine = "Parse Call"`. No phantom contacts.
-
-Fields: firstname, lastname, email, phone (Apollo enrichment if up),
-jobtitle, company, hs_lead_status, lifecyclestage.
-
-### Resolve / create / update Notion Contacts (NEW)
-For each external participant after HubSpot resolution:
 1. Search Contacts DB by exact email match.
 2. Match → UPDATE Last Touch = meeting date,
    Last Touch Source = "Parse Call".
@@ -269,24 +264,30 @@ For each external participant after HubSpot resolution:
    - Name, Email, Title (from transcript), Company, Phone, LinkedIn
      (if mentioned), Owner = Chris (or matching Rep),
      Last Touch = meeting date, Last Touch Source = "Parse Call",
-     HubSpot Contact ID, Source Routine = "Parse Call".
+     Source Routine = "Parse Call". Leave any HubSpot ID property
+     blank — Anti-Slip backfills HubSpot IDs when it matches a
+     historical record.
 
-### Resolve / create / update HubSpot companies
-Match by email domain or exact company name. No match → CREATE.
-Apollo enrichment if up; otherwise transcript-only.
+**HubSpot is NOT used by Parse Call.** Notion is the source of truth
+for active contacts and deals. HubSpot is only consulted by Anti-Slip
+for historical/closed-deal context. Do not write to HubSpot from this
+routine — no contact creates, no company creates, no meeting log, no
+HubSpot task creates. All capture goes into Notion.
 
 ### Update / create the 📊 Deals record (KEY STEP)
 
-**Filter rules — strictly enforce:**
-- If HubSpot deal `dealstage = closedlost` → SKIP entirely. Closed
-  lost deals NEVER enter the Notion Deals DB.
+**Filter rules:**
+- **Closed-lost deals ARE tracked in Notion** with `Status Flag = "Dead"`
+  and `Stage = "Lost"`. They're filtered out of active dashboards via
+  Status Flag but remain in the DB for historical reference and to
+  prevent accidental re-engagement.
 - If creating a new Deal: there must be recent activity (this
   transcript counts). Stale deals with no activity in 90+ days don't
   get auto-created — they go to CRM Review Queue for Chris's review.
 
-For each external contact, query Deals DB for an Active or At-Risk
-deal where Primary Contact Email = participant email OR Company =
-participant company.
+For each external contact, query Deals DB for an existing deal where
+Primary Contact Email = participant email OR Company = participant
+company.
 
 **One match:**
 - Set `Last Activity = meeting date`,
@@ -303,7 +304,7 @@ participant company.
   `Suggested Action = "Advance <Deal> from <stage> to <new stage>: <evidence>"`.
   Do NOT auto-advance.
 
-**No match but strong opportunity AND not closed-lost:**
+**No match but strong opportunity:**
 - CRM Review Queue, `Type = "Stale deal"` or `"Other"`,
   `Suggested Action = "Consider creating Deal: <reason, timeline, amount>"`.
 
@@ -321,17 +322,6 @@ For every external call processed, create one Activity:
 - `Source Link` = Fireflies URL
 - `Summary` = ≤200-word recap (decisions, blockers, action items)
 - `Source Routine = "Parse Call"`
-
-### Enrich the HubSpot meeting record
-Find by date + attendees. Fill Log Meeting field, max 400 words
-(context, discussion, blockers, decisions, follow-ups, next steps).
-Set Meeting Outcome appropriately.
-
-### Create HubSpot tasks
-For action items with non-Chris owner:
-- Default association: contact (or Deal if exists)
-- Due date based on transcript urgency
-Ambiguous → CRM Review Queue, `Type = "Ambiguous action item"`.
 
 ### Create 📋 Action Pipeline tasks (KEY STEP)
 
@@ -496,9 +486,9 @@ For EACH draft created:
 When Chris commits on call to introduce two people:
 1. Look up both in Google Contacts.
 2. Both found → draft AND auto-send (Chris as sender, both as
-   recipients). HubSpot activity log on both contacts. Action
-   Pipeline task with `Status = "Done"`. Activity row
-   (`Type = "Email Sent"`).
+   recipients). Action Pipeline task with `Status = "Done"`.
+   Activity row (`Type = "Email Sent"`, both contacts in Contact
+   relation).
 3. Only one found → draft, leave in drafts, note "Missing email for <name>".
    Action Pipeline task as normal.
 4. Neither found → CRM Review Queue, `Type = "Missing intro email"`.
@@ -506,14 +496,16 @@ When Chris commits on call to introduce two people:
 If Google Contacts down → all intros to drafts, no auto-send.
 
 ### Deals — what to do and not do
-- Do NOT auto-create deals; route to CRM Review Queue.
-- DO update existing HubSpot deals (dealname, dealstage, closedate,
-  amount, Deal Owner, Forecast Category, Proposal Accepted, Advance
-  to Next Stage).
-- ALSO update Notion Deals DB row (Last Activity, Last Activity
-  Source, Notes append).
-- Stage change → write Activity (`Type = "Stage Change"`,
-  `Summary = "<old stage> → <new stage>"`).
+- Do NOT auto-create deals; route to CRM Review Queue with
+  `Type = "Other"`, `Suggested Action = "Consider creating Deal: <reason>"`.
+- DO update the Notion Deals DB row (Last Activity, Last Activity
+  Source, Notes append, Primary Contact relation).
+- Stage advances NEVER auto-applied — route to CRM Review Queue with
+  evidence; Chris flips Stage manually.
+- Stage change observed (after Chris updates manually) → write
+  Activity (`Type = "Stage Change"`,
+  `Summary = "<old stage> → <new stage>"`) on the next run.
+- Do NOT write to HubSpot. HubSpot is read-only (Anti-Slip only).
 
 ---
 
@@ -612,18 +604,23 @@ auto-disappear from the active board.
 
 ## Guardrails (never violate)
 
-- **Never** add closed-lost deals to Notion Deals DB.
+- **Closed-lost deals ARE tracked** in Notion Deals DB with
+  `Status Flag = "Dead"` and `Stage = "Lost"` — but only when there's
+  a real signal in the transcript or matching Sales Home / HubSpot
+  record. The active dashboard filters them out via Status Flag.
 - **Never** create a Deal without recent activity (this run's call
   counts; otherwise route to CRM Review Queue).
-- Never dump raw transcript into HubSpot or Notion.
+- **Never write to HubSpot.** No contact creates, company creates,
+  meeting log, or task creates. HubSpot is read-only and is
+  Anti-Slip's domain only.
+- Never dump raw transcript into Notion.
 - Exact email match beats name match.
-- Don't overwrite stronger HubSpot data with weaker Apollo.
-- Don't auto-create deals.
+- Don't auto-create deals (route to CRM Review Queue with evidence).
+- Don't auto-advance deal stages (route to CRM Review Queue).
 - Don't create tasks without a clear action item.
 - Don't auto-send any email except verified intros.
 - Never ask Chris a question during a scheduled run.
-- HubSpot meeting summaries ≤400 words. Notion summaries ≤300.
-  Activity Summaries ≤200.
+- Notion meeting summaries ≤300 words. Activity Summaries ≤200.
 - Always tag writes with `Source Routine = "Parse Call"`.
 - **Connector strategy:** always try Zapier first (when the Zapier
   action is available), fall back to Anthropic on error, log
