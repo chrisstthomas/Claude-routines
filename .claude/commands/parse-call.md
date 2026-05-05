@@ -13,8 +13,10 @@ $ARGUMENTS
 This is one of two routines that together form Chris's **sales brain**.
 The brain has three surfaces:
 
-  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage, only
-     active / at-risk; closed-lost deals never enter)
+  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage; the
+     active dashboard filters Status Flag = Active / At Risk, but
+     closed-lost deals ARE stored in the DB with Status Flag = Dead
+     for historical reference)
   2. **Action Pipeline** — `📋 Chris's Action Pipeline` DB (DEFCON
      1–5 funnel of what Chris must do, can review, or is owed)
   3. **Activity Feed** — `📜 Activities` DB (every call, email, draft,
@@ -24,11 +26,16 @@ The brain has three surfaces:
 Parse Call's job: turn every call Chris just had into:
 - a logged Activity for the relevant Deal,
 - updated Contact records (and Contact → Deal links),
-- updated HubSpot meeting / contact / company records,
+- updated Notion Deal record (Last Activity, Notes, stage-change flags
+  for review),
 - a follow-up email draft in Gmail,
 - DEFCON-prioritized Action Pipeline tasks for everything Chris must
   do or review,
 - Notion meeting notes for internal calls.
+
+**HubSpot is NOT touched by this routine.** All capture goes into
+Notion. HubSpot is read-only and consulted only by Anti-Slip Through
+the Cracks for closed-lost / closed-won historical lookback.
 
 The companion routine ("Anti-Slip Through the Cracks") catches deals
 that have gone silent. Stay in your lane: Parse Call works calls that
@@ -190,8 +197,10 @@ Tag every write with `Source Routine = "Parse Call"`.
 
 ## Connector resilience (CRITICAL)
 
-**Required:** Fireflies, HubSpot, Notion, Google Calendar, Gmail.
+**Required:** Fireflies, Notion, Google Calendar, Gmail.
 **Optional:** Apollo, Google Contacts, Slack.
+**Not used:** HubSpot (Parse Call neither reads nor writes HubSpot —
+that's Anti-Slip's read-only domain).
 
 Optional connector errors → log to Connectors Down, skip dependent
 steps, continue.
@@ -220,8 +229,8 @@ exit. Do not retry.
 - `Status`: Success / Partial / No-op / Failed
 - `Finished At`: now
 - `Items Processed`: transcripts examined
-- `Items Created`: drafts + Notion pages + HubSpot records + Action
-  Pipeline tasks + Activities + Deal updates
+- `Items Created`: drafts + Notion pages + Action Pipeline tasks +
+  Activities + Deal updates + Contact updates
 - `Items Skipped`: personal/partner-only/empty/closed-lost
 - `Connectors Down`
 - `Summary` ≤300 words: one bullet per transcript with title +
@@ -255,8 +264,9 @@ For each external participant:
    - Name, Email, Title (from transcript), Company, Phone, LinkedIn
      (if mentioned), Owner = Chris (or matching Rep),
      Last Touch = meeting date, Last Touch Source = "Parse Call",
-     HubSpot Contact ID (if known from prior session — leave blank if
-     new), Source Routine = "Parse Call".
+     Source Routine = "Parse Call". Leave any HubSpot ID property
+     blank — Anti-Slip backfills HubSpot IDs when it matches a
+     historical record.
 
 **HubSpot is NOT used by Parse Call.** Notion is the source of truth
 for active contacts and deals. HubSpot is only consulted by Anti-Slip
@@ -312,17 +322,6 @@ For every external call processed, create one Activity:
 - `Source Link` = Fireflies URL
 - `Summary` = ≤200-word recap (decisions, blockers, action items)
 - `Source Routine = "Parse Call"`
-
-### Enrich the HubSpot meeting record
-Find by date + attendees. Fill Log Meeting field, max 400 words
-(context, discussion, blockers, decisions, follow-ups, next steps).
-Set Meeting Outcome appropriately.
-
-### Create HubSpot tasks
-For action items with non-Chris owner:
-- Default association: contact (or Deal if exists)
-- Due date based on transcript urgency
-Ambiguous → CRM Review Queue, `Type = "Ambiguous action item"`.
 
 ### Create 📋 Action Pipeline tasks (KEY STEP)
 
@@ -487,9 +486,9 @@ For EACH draft created:
 When Chris commits on call to introduce two people:
 1. Look up both in Google Contacts.
 2. Both found → draft AND auto-send (Chris as sender, both as
-   recipients). HubSpot activity log on both contacts. Action
-   Pipeline task with `Status = "Done"`. Activity row
-   (`Type = "Email Sent"`).
+   recipients). Action Pipeline task with `Status = "Done"`.
+   Activity row (`Type = "Email Sent"`, both contacts in Contact
+   relation).
 3. Only one found → draft, leave in drafts, note "Missing email for <name>".
    Action Pipeline task as normal.
 4. Neither found → CRM Review Queue, `Type = "Missing intro email"`.
@@ -497,14 +496,16 @@ When Chris commits on call to introduce two people:
 If Google Contacts down → all intros to drafts, no auto-send.
 
 ### Deals — what to do and not do
-- Do NOT auto-create deals; route to CRM Review Queue.
-- DO update existing HubSpot deals (dealname, dealstage, closedate,
-  amount, Deal Owner, Forecast Category, Proposal Accepted, Advance
-  to Next Stage).
-- ALSO update Notion Deals DB row (Last Activity, Last Activity
-  Source, Notes append).
-- Stage change → write Activity (`Type = "Stage Change"`,
-  `Summary = "<old stage> → <new stage>"`).
+- Do NOT auto-create deals; route to CRM Review Queue with
+  `Type = "Other"`, `Suggested Action = "Consider creating Deal: <reason>"`.
+- DO update the Notion Deals DB row (Last Activity, Last Activity
+  Source, Notes append, Primary Contact relation).
+- Stage advances NEVER auto-applied — route to CRM Review Queue with
+  evidence; Chris flips Stage manually.
+- Stage change observed (after Chris updates manually) → write
+  Activity (`Type = "Stage Change"`,
+  `Summary = "<old stage> → <new stage>"`) on the next run.
+- Do NOT write to HubSpot. HubSpot is read-only (Anti-Slip only).
 
 ---
 
@@ -603,18 +604,23 @@ auto-disappear from the active board.
 
 ## Guardrails (never violate)
 
-- **Never** add closed-lost deals to Notion Deals DB.
+- **Closed-lost deals ARE tracked** in Notion Deals DB with
+  `Status Flag = "Dead"` and `Stage = "Lost"` — but only when there's
+  a real signal in the transcript or matching Sales Home / HubSpot
+  record. The active dashboard filters them out via Status Flag.
 - **Never** create a Deal without recent activity (this run's call
   counts; otherwise route to CRM Review Queue).
-- Never dump raw transcript into HubSpot or Notion.
+- **Never write to HubSpot.** No contact creates, company creates,
+  meeting log, or task creates. HubSpot is read-only and is
+  Anti-Slip's domain only.
+- Never dump raw transcript into Notion.
 - Exact email match beats name match.
-- Don't overwrite stronger HubSpot data with weaker Apollo.
-- Don't auto-create deals.
+- Don't auto-create deals (route to CRM Review Queue with evidence).
+- Don't auto-advance deal stages (route to CRM Review Queue).
 - Don't create tasks without a clear action item.
 - Don't auto-send any email except verified intros.
 - Never ask Chris a question during a scheduled run.
-- HubSpot meeting summaries ≤400 words. Notion summaries ≤300.
-  Activity Summaries ≤200.
+- Notion meeting summaries ≤300 words. Activity Summaries ≤200.
 - Always tag writes with `Source Routine = "Parse Call"`.
 - **Connector strategy:** always try Zapier first (when the Zapier
   action is available), fall back to Anthropic on error, log

@@ -14,8 +14,10 @@ $ARGUMENTS
 This is one of two routines that together form Chris's **sales brain**.
 The brain has three surfaces:
 
-  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage, only
-     active / at-risk; closed-lost deals never enter)
+  1. **Pipeline Dashboard** — `📊 Deals` DB (Kanban by Stage; active
+     dashboard filters Status Flag = Active / At Risk, but closed-
+     lost deals ARE stored with Status Flag = Dead for historical
+     reference and to prevent accidental re-pursuit)
   2. **Action Pipeline** — `📋 Chris's Action Pipeline` DB (DEFCON
      1–5 funnel of what Chris must do, can review, or is owed)
   3. **Activity Feed** — `📜 Activities` DB (every event = one row,
@@ -205,16 +207,20 @@ Filter `Status Flag IN [Active, At Risk]`. Flag any where:
 Look in Opportunity Notes and Proposals & SOWs for entries with no
 matching Deals DB row.
 
-**Filter rules — strictly enforce:**
-- Skip if Sales Home Stage = "Closed Lost" or "Declined by Client"
-  → these never enter Deals DB.
-- Require recent activity (note within 90 days) to create a new
-  Deal. Stale Sales Home entries with no recent note do NOT auto-
-  create — go to CRM Review Queue with
-  `Type = "Stale deal"` and `Suggested Action = "Confirm whether
-  <Deal> is still alive before creating Deals row"`.
+**Filter rules:**
+- **Closed-lost / declined entries DO ingest** — but with
+  `Status Flag = "Dead"` and `Stage = "Lost"` (or
+  `Stage = "Disqualified"` for Declined by Client). These rows are
+  filtered out of the active dashboard via Status Flag but stored for
+  historical reference and to prevent accidental re-pursuit. Do NOT
+  draft re-engagement messages for closed-lost deals.
+- For active / in-flight Sales Home entries: require recent activity
+  (note within 90 days) to auto-create a new Deal. Stale entries
+  with no recent note → CRM Review Queue with `Type = "Stale deal"`
+  and `Suggested Action = "Confirm whether <Deal> is still alive
+  before creating Deals row"`.
 
-When creating a new Deal:
+When creating a new Deal (any Status Flag):
 - Set `Source Routine = "Anti-Slip Through the Cracks"` (or
   "Backfill" for first-run).
 - Set `Sales Home Source URL` to the Notion page URL.
@@ -222,7 +228,9 @@ When creating a new Deal:
   point at the new Deal (relation, DUAL). This is what makes the
   Sales Home Opportunity Notes view actually reference the new HQ
   system. Without this step, Opportunity Notes appears disconnected.
-- Treat as Active candidate for re-engagement evaluation.
+- For Active / At-Risk: treat as candidate for re-engagement
+  evaluation. For Dead: stop after creation; no draft, no Action
+  Pipeline task beyond optional historical-backfill activity.
 
 ### 1C. HubSpot dormant customers + closed-lost lookback (HubSpot read-only)
 
@@ -634,9 +642,11 @@ the next run (see Step 10).
 
 ## Out of scope
 - Auto-sending
-- Marking dead without approval
+- Marking active deals dead without approval (closed-lost ingestion
+  from Sales Home / HubSpot is automatic and separate)
 - Reaching out to active deals (Parse Call's job)
 - Reaching out to Do Not Contact
-- Creating closed-lost Deal records
+- Drafting re-engagement messages for closed-lost / Dead-flagged
+  deals — they ingest as historical reference only
 
 Begin now.
