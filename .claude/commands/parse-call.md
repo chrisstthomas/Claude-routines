@@ -106,11 +106,16 @@ fails, treat as a hard error: write Status=Failed on Run row with
 
 ## Identity
 
-- Chris St. Thomas — christopher@anthropicidentity.com — CRO, Anthropic Identity
-- **CEO: James Bonifield** — james@anthropicidentity.com (the bare `james@` mailbox is his; signs as "James Bonifield, CEO & Managing Partner")
-- Internal domain: @anthropicidentity.com
+- Chris St. Thomas — christopher@apivant.io — CRO, Apivant
+- **CEO: James Bonifield** — james@apivant.io (the bare `james@` mailbox is his; signs as "James Bonifield, CEO & Managing Partner")
+- **Internal domains: `@apivant.io` (current) and `@anthropicidentity.com`
+  (legacy).** The company rebranded from Anthropic Identity to Apivant
+  around 2026-08-12. Treat BOTH domains as internal everywhere in this
+  routine. Address all new mail to `@apivant.io` — legacy-domain
+  mailboxes are dead and drafts sent there will bounce. Also treat
+  `@authonomy.io` (product-side, e.g. topher@authonomy.io) as internal.
 - Known partner (skip CRM creation, note in summary): Liam Glennie
-  (liam.glennie@anthropicidentity.com, liamglennie@gmail.com)
+  (liam@deskmonkeyai.com, liamglennie@gmail.com)
 - Internal team: Topher Marie, James Hong, James Bonifield (CEO),
   Harry Lambert, Jesse Johnson, Sunbid Shrestha, Robert Bennett,
   Emily Cho, Diego Koga, Julie Harris, Heather Gowrie
@@ -130,14 +135,14 @@ task to the wrong person.
 
 | Identifier | Role | Email | Context tips |
 |---|---|---|---|
-| **James Hong** | East Coast AE Lead | james.hong@anthropicidentity.com | Default for "James" in sales / forecast / deal-progression context. Stage 4 deals (Bullridge, G2, Discount Tires, CSBS). Weekly 1:1 with Chris. Sometimes "James H" or "Hong". |
-| **James Bonifield** | **CEO & Managing Partner** | **james@anthropicidentity.com** (bare `james@`) | Context: equity, hiring approval, board, governance, MSA, Fulcrum, milestones, margins, ops. Owns inherited HubSpot deals from before Chris joined. Sometimes "JB" or "Bonifield". The `james@` mailbox is **always** Bonifield. **(There is no "James Holland" — that was a prior misread; do not use that name.)** |
+| **James Hong** | East Coast AE Lead | james.hong@apivant.io | Default for "James" in sales / forecast / deal-progression context. Stage 4 deals (Bullridge, G2, Discount Tires, CSBS). Weekly 1:1 with Chris. Sometimes "James H" or "Hong". |
+| **James Bonifield** | **CEO & Managing Partner** | **james@apivant.io** (bare `james@`) | Context: equity, hiring approval, board, governance, MSA, Fulcrum, milestones, margins, ops. Owns inherited HubSpot deals from before Chris joined. Sometimes "JB" or "Bonifield". The `james@` mailbox is **always** Bonifield. **(There is no "James Holland" — that was a prior misread; do not use that name.)** |
 
 ### "Chris" — multiple
 
 | Identifier | Role | Email | Context tips |
 |---|---|---|---|
-| **Chris St. Thomas** | CRO, routine owner | christopher@anthropicidentity.com | Default for any "Chris" said by an internal Anthropic Identity employee or in any internal context. |
+| **Chris St. Thomas** | CRO, routine owner | christopher@apivant.io | Default for any "Chris" said by an internal Apivant employee or in any internal context. |
 | **Chris Norris** | Okta AI Product Team (external) | (external Okta) | Context: Okta, AI product team, MJS Packaging compete deck, Authonomy demo. |
 | **Chris Solomon** | Okta AE on Optro deal (external) | (external Okta) | Context: Optro, Auth0 Advisory. |
 
@@ -149,7 +154,7 @@ task to the wrong person.
 | **Andrew DeSomma** | P99 founder (network latency software, external) | (external) | Context: P99, networking, fundraising, "DeSomma/Orlofski" call. |
 
 ### "Topher" / "Toph"
-- **Topher Marie** — Anthropic Identity co-founder / Autonomy product owner. Email: topher.marie@anthropicidentity.com. Don't confuse with Christopher (Chris) St. Thomas.
+- **Topher Marie** — Apivant co-founder / Autonomy product owner. Email: topher.marie@apivant.io. Don't confuse with Christopher (Chris) St. Thomas.
 
 ### Disambiguation procedure
 
@@ -217,12 +222,30 @@ exit. Do not retry.
 2. Create Claude Routine Runs row:
    - `Routine = "Parse Call"`, `Status = "Partial"`, `Started At = now`,
      `Triggered By = "Schedule"` (or "Manual").
-3. `fireflies_get_transcripts` with `mine: true`, `limit: 50`,
+3. `fireflies_get_transcripts` with `limit: 50`,
    `fromDate = (last successful run Finished At - 1 day)`. Default to
    last 7 days if no prior cursor.
+
+   **Do NOT pass `mine: true`.** That filter resolves against a single
+   account identity and silently dropped every meeting organized under
+   `christopher@apivant.io` after the rebrand — the routine logged
+   false "No-op, no new transcripts" runs for 8 days while 15 real
+   calls went uncaptured. Pull unfiltered, then keep a transcript if
+   its Organizer Email OR any participant is one of Chris's addresses
+   (`christopher@apivant.io`, `christopher@anthropicidentity.com`) and
+   discard the rest.
+
+   **Sanity check (required).** If this query returns zero transcripts
+   for a window in which Google Calendar shows completed meetings with
+   Chris as organizer or attendee, do NOT log a No-op. Treat it as a
+   capture failure: `Status = "Failed"`, log the discrepancy under
+   Errors / Blockers, and raise a DEFCON-1 Action Pipeline task. A
+   quiet No-op must mean "Chris had no calls", never "the query
+   matched nothing".
 4. Process oldest-first. Skip transcripts already processed (check
    prior run Summaries).
-5. If zero new transcripts: `Status = "No-op"`,
+5. If zero new transcripts AND the calendar sanity check agrees the
+   window was genuinely empty: `Status = "No-op"`,
    `Summary = "No new transcripts since <date>"`, close, exit.
 
 ### At end
@@ -242,7 +265,8 @@ A run that finds nothing still writes a No-op row.
 ---
 
 ## Step 0 — Classify the call
-- All participants `@anthropicidentity.com` → Internal path
+- All participants on an internal domain (`@apivant.io`,
+  `@anthropicidentity.com`, `@authonomy.io`) → Internal path
 - No business context (personal/family/errand) → Skipped, advance
 - ≥1 external participant → External path
 
@@ -251,7 +275,8 @@ A run that finds nothing still writes a No-op row.
 ## External path
 
 ### Identify participants
-- Internal `@anthropicidentity.com` → no CRM action
+- Internal domain (`@apivant.io`, `@anthropicidentity.com`,
+  `@authonomy.io`) → no CRM action
 - Liam Glennie → no CRM creation, note in summary
 - External → continue (apply name disambiguation table above)
 
