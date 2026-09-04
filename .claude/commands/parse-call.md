@@ -165,8 +165,8 @@ task to the wrong person.
 ## Notion IDs (hardcoded)
 
 - Chris's Internal HQ (parent page):  `35281a33-7504-81a1-833e-ffed81c7328d`
-- Claude Routine Runs DB:             `collection://3ae8c44d-21e2-4e38-987c-1ffa5d38464c`
-- CRM Review Queue DB:                `collection://65999c82-db08-44e5-b35b-f5249bdce201`
+- Claude Routine Runs DB:             `collection://01a1e879-0435-4e5b-93bb-49b0c935eddf`
+- CRM Review Queue DB:                `collection://acbee857-2442-4ac7-87cf-fa54055413a4`
 - 📊 Deals DB:                        `collection://9b9841c0-61ba-468f-8059-842d6a5dd7ca`
 - 📋 Chris's Action Pipeline DB:      `collection://b4b49cf4-eb24-4df7-8910-80e171a7eb4b`
 - 👤 Reps DB:                         `collection://ec1321d8-c687-41cc-a540-6ae1fe9dee6f`
